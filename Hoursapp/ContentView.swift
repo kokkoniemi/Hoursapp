@@ -5,16 +5,18 @@ struct ContentView: View {
     @State private var sheet: EditSheet?
 
     var body: some View {
-        VStack(spacing: 0) {
-            HeaderView(model: model)
-            Divider()
-            WeekStripView(model: model)
-            Divider()
-            EntriesListView(model: model, sheet: $sheet)
-            Divider()
-            FooterView(sheet: $sheet, dayKey: model.dayKey)
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            VStack(spacing: 0) {
+                HeaderView(model: model)
+                Divider()
+                WeekStripView(model: model, now: context.date)
+                Divider()
+                EntriesListView(model: model, sheet: $sheet, now: context.date)
+                Divider()
+                FooterView(sheet: $sheet, dayKey: model.dayKey)
+            }
+            .frame(width: 480, height: 640)
         }
-        .frame(width: 480, height: 640)
         .background(Color(nsColor: .windowBackgroundColor))
         .sheet(item: $sheet) { item in
             EntrySheet(sheet: item) { sheet = nil }
@@ -60,6 +62,7 @@ private struct HeaderView: View {
 
 private struct WeekStripView: View {
     let model: DayViewModel
+    let now: Date
 
     var body: some View {
         HStack(spacing: 0) {
@@ -67,7 +70,7 @@ private struct WeekStripView: View {
                 Button {
                     model.select(date: day.date)
                 } label: {
-                    DayPill(day: day)
+                    DayPill(day: day, now: now)
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
@@ -79,14 +82,11 @@ private struct WeekStripView: View {
 
 private struct DayPill: View {
     let day: WeekDay
+    let now: Date
 
     private var labelColor: Color {
         if day.isSelected { return .white }
         return day.isToday ? .accentColor : .primary
-    }
-
-    private var totalColor: Color {
-        day.isSelected ? .primary : .secondary
     }
 
     var body: some View {
@@ -103,9 +103,9 @@ private struct DayPill: View {
             }
             .frame(height: 26)
 
-            Text(TimeFormat.hoursMinutes(day.totalSeconds))
+            Text(TimeFormat.hoursMinutes(day.displayedSeconds(at: now)))
                 .font(.system(size: 11))
-                .foregroundStyle(totalColor)
+                .foregroundStyle(day.isSelected ? .primary : .secondary)
                 .monospacedDigit()
         }
     }
@@ -114,6 +114,7 @@ private struct DayPill: View {
 private struct EntriesListView: View {
     let model: DayViewModel
     @Binding var sheet: EditSheet?
+    let now: Date
 
     var body: some View {
         if model.groupedEntries.isEmpty {
@@ -123,7 +124,7 @@ private struct EntriesListView: View {
             ScrollView {
                 LazyVStack(spacing: 0) {
                     ForEach(Array(model.groupedEntries.enumerated()), id: \.element.id) { index, group in
-                        EntryRow(group: group)
+                        EntryRow(group: group, now: now, dayKey: model.dayKey)
                             .contentShape(Rectangle())
                             .onTapGesture {
                                 if let entry = model.entries(for: group).first {
@@ -142,6 +143,10 @@ private struct EntriesListView: View {
 
 private struct EntryRow: View {
     let group: EntryGroup
+    let now: Date
+    let dayKey: String
+
+    private let storage = Storage.shared
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
@@ -158,14 +163,29 @@ private struct EntryRow: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            Text(TimeFormat.hoursMinutes(group.totalSeconds))
+            Text(TimeFormat.hoursMinutes(group.displayedSeconds(at: now)))
                 .font(.system(size: 16, weight: .light))
                 .foregroundStyle(.primary)
                 .monospacedDigit()
 
-            Image(systemName: group.hasRunningEntry ? "pause.circle" : "play.circle")
-                .font(.system(size: 20, weight: .light))
-                .foregroundStyle(group.hasRunningEntry ? Color.accentColor : .secondary)
+            Button {
+                if group.hasRunningEntry {
+                    storage.stopTimer()
+                } else {
+                    storage.startTimer(
+                        client: group.client,
+                        project: group.project,
+                        task: group.task,
+                        on: dayKey
+                    )
+                }
+            } label: {
+                Image(systemName: group.hasRunningEntry ? "pause.circle.fill" : "play.circle")
+                    .font(.system(size: 22, weight: .light))
+                    .foregroundStyle(group.hasRunningEntry ? Color.accentColor : .secondary)
+            }
+            .buttonStyle(.plain)
+            .help(group.hasRunningEntry ? "Stop timer" : "Start timer")
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)

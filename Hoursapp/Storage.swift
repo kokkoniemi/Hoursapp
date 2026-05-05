@@ -84,6 +84,63 @@ final class Storage {
         scheduleSaveEntries()
     }
 
+    func startTimer(client: String, project: String, task: String, on date: String) {
+        stopTimer()
+        let nowText = DateFormat.timestamp(from: .now)
+        if let i = entries.firstIndex(where: {
+            $0.date == date && $0.client == client && $0.project == project && $0.task == task
+        }) {
+            entries[i].startedAt = nowText
+            entries[i].stoppedAt = nil
+        } else {
+            entries.append(Entry(
+                id: UUID().uuidString,
+                date: date,
+                client: client,
+                project: project,
+                task: task,
+                seconds: 0,
+                notes: "",
+                startedAt: nowText,
+                stoppedAt: nil
+            ))
+        }
+        addClient(ClientProject(client: client, project: project))
+        addTask(TaskType(name: task))
+        scheduleSaveEntries()
+    }
+
+    func stopTimer() {
+        guard let i = entries.firstIndex(where: { $0.isRunning }) else { return }
+        let now = Date.now
+        if let started = entries[i].startedAt,
+           let startDate = DateFormat.timestampFormatter.date(from: started) {
+            entries[i].seconds += max(0, Int(now.timeIntervalSince(startDate)))
+        }
+        entries[i].stoppedAt = DateFormat.timestamp(from: now)
+        scheduleSaveEntries()
+    }
+
+    func displayedSeconds(for entry: Entry, at now: Date = .now) -> Int {
+        guard entry.isRunning,
+              let started = entry.startedAt,
+              let startDate = DateFormat.timestampFormatter.date(from: started) else {
+            return entry.seconds
+        }
+        return entry.seconds + max(0, Int(now.timeIntervalSince(startDate)))
+    }
+
+    func runningStartedAtDate() -> Date? {
+        guard let started = runningEntry()?.startedAt else { return nil }
+        return DateFormat.timestampFormatter.date(from: started)
+    }
+
+    func todayTotalSeconds(at now: Date = .now) -> Int {
+        let today = DateFormat.day(from: now)
+        return entries.filter { $0.date == today }
+            .reduce(0) { $0 + displayedSeconds(for: $1, at: now) }
+    }
+
     private func ensureFile(at url: URL, header: [String]) throws {
         if !FileManager.default.fileExists(atPath: url.path) {
             try CSV.encode([header]).write(to: url, atomically: true, encoding: .utf8)
@@ -135,7 +192,7 @@ final class Storage {
         saveClientsTask = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(500))
             if Task.isCancelled { return }
-            await self?.write(rows: [Self.clientsHeader] + snapshot.map { [$0.client, $0.project] }, to: url)
+            self?.write(rows: [Self.clientsHeader] + snapshot.map { [$0.client, $0.project] }, to: url)
         }
     }
 
@@ -146,7 +203,7 @@ final class Storage {
         saveTasksTask = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(500))
             if Task.isCancelled { return }
-            await self?.write(rows: [Self.tasksHeader] + snapshot.map { [$0.name] }, to: url)
+            self?.write(rows: [Self.tasksHeader] + snapshot.map { [$0.name] }, to: url)
         }
     }
 
@@ -160,7 +217,7 @@ final class Storage {
             let rows: [[String]] = [Self.entriesHeader] + snapshot.map { e in
                 [e.id, e.date, e.client, e.project, e.task, String(e.seconds), e.notes, e.startedAt ?? "", e.stoppedAt ?? ""]
             }
-            await self?.write(rows: rows, to: url)
+            self?.write(rows: rows, to: url)
         }
     }
 

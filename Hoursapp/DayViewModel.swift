@@ -5,21 +5,34 @@ struct WeekDay: Identifiable, Hashable {
     let date: Date
     let dayKey: String
     let label: String
-    let totalSeconds: Int
+    let baseSeconds: Int
+    let runningStartedAt: Date?
     let isSelected: Bool
     let isToday: Bool
 
     var id: String { dayKey }
+    var hasRunningEntry: Bool { runningStartedAt != nil }
+
+    func displayedSeconds(at now: Date) -> Int {
+        guard let started = runningStartedAt else { return baseSeconds }
+        return baseSeconds + max(0, Int(now.timeIntervalSince(started)))
+    }
 }
 
 struct EntryGroup: Identifiable, Hashable {
     let client: String
     let project: String
     let task: String
-    let totalSeconds: Int
-    let hasRunningEntry: Bool
+    let baseSeconds: Int
+    let runningStartedAt: Date?
 
     var id: String { "\(client)|\(project)|\(task)" }
+    var hasRunningEntry: Bool { runningStartedAt != nil }
+
+    func displayedSeconds(at now: Date) -> Int {
+        guard let started = runningStartedAt else { return baseSeconds }
+        return baseSeconds + max(0, Int(now.timeIntervalSince(started)))
+    }
 }
 
 @MainActor
@@ -67,12 +80,17 @@ final class DayViewModel {
         return (0..<7).compactMap { offset in
             guard let date = calendar.date(byAdding: .day, value: offset, to: interval.start) else { return nil }
             let key = DateFormat.day(from: date)
-            let total = storage.entries.filter { $0.date == key }.reduce(0) { $0 + $1.seconds }
+            let dayEntries = storage.entries.filter { $0.date == key }
+            let base = dayEntries.reduce(0) { $0 + $1.seconds }
+            let runningStart = dayEntries.first(where: \.isRunning)
+                .flatMap { $0.startedAt }
+                .flatMap { DateFormat.timestampFormatter.date(from: $0) }
             return WeekDay(
                 date: date,
                 dayKey: key,
                 label: Self.narrowWeekdayFormatter.string(from: date),
-                totalSeconds: total,
+                baseSeconds: base,
+                runningStartedAt: runningStart,
                 isSelected: calendar.isDate(date, inSameDayAs: selectedDate),
                 isToday: calendar.isDateInToday(date)
             )
@@ -84,12 +102,15 @@ final class DayViewModel {
         let dayEntries = storage.entries.filter { $0.date == key }
         let buckets = Dictionary(grouping: dayEntries) { GroupKey(client: $0.client, project: $0.project, task: $0.task) }
         return buckets.map { key, items in
-            EntryGroup(
+            let runningStart = items.first(where: \.isRunning)
+                .flatMap { $0.startedAt }
+                .flatMap { DateFormat.timestampFormatter.date(from: $0) }
+            return EntryGroup(
                 client: key.client,
                 project: key.project,
                 task: key.task,
-                totalSeconds: items.reduce(0) { $0 + $1.seconds },
-                hasRunningEntry: items.contains(where: \.isRunning)
+                baseSeconds: items.reduce(0) { $0 + $1.seconds },
+                runningStartedAt: runningStart
             )
         }.sorted { lhs, rhs in
             if lhs.client != rhs.client { return lhs.client < rhs.client }
