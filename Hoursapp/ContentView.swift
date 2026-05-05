@@ -231,11 +231,14 @@ private struct FooterView: View {
 
             Spacer()
 
-            Button { } label: {
+            Button {
+                SettingsWindowController.shared.show()
+            } label: {
                 Image(systemName: "gearshape")
             }
             .buttonStyle(.borderless)
-            .help("Settings (Phase 5)")
+            .help("Settings")
+            .keyboardShortcut(",", modifiers: [.command])
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)

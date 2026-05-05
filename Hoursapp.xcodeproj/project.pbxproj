@@ -8,18 +8,23 @@
 
 /* Begin PBXBuildFile section */
 		083750E2CF7C20A38307952C /* DayViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 219FE6AC1ED5702087A4C454 /* DayViewModel.swift */; };
+		0DD66434492EDE731E45B9F7 /* IdleDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F0E09E6EA9D7C31BBA66D3C /* IdleDetector.swift */; };
 		0FC7400029712968F3C501E2 /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 604B30AE4535981EF1467680 /* MenuBarController.swift */; };
 		248F2A8BF50E8876BF987CD4 /* EntrySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0285268E0845ABE709CB5219 /* EntrySheet.swift */; };
 		2839650D95C3C46BC14F7DAF /* CSV.swift in Sources */ = {isa = PBXBuildFile; fileRef = 899365942FEA1EEA7E3920F4 /* CSV.swift */; };
 		4086E91D4343AB7AF0C165CC /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 325415D88E4E142B396BAC3C /* AppDelegate.swift */; };
 		4A1C085D7628A8B37CD12C4E /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 914725E067D738B9A189BAF9 /* Models.swift */; };
+		5882160E582579CE2931F4E7 /* LaunchAtLogin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A0D162DF65F3D7DC3BD1BB4 /* LaunchAtLogin.swift */; };
 		8B92ECF8872245F993C2BB8B /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA61E67A38EA599B05924639 /* ContentView.swift */; };
+		90C994774BA0C8826D9023CD /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD7E0C26F2E8E0E320BF7DBE /* SettingsWindowController.swift */; };
 		9A295A83C3BD5222495F55B4 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20DFC7E015F2F76D556536AA /* Theme.swift */; };
 		A366D3B0AD82933F60D90019 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2723FE985A198A989329F1EC /* Assets.xcassets */; };
 		C901366E8DCED5540022105C /* HoursappApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EE3E96AD447C3F249CBBE7D /* HoursappApp.swift */; };
 		C9593BABA387A1A30399F5EA /* StorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A93F34B4395079B130275A46 /* StorageTests.swift */; };
 		C97D37CF16BCA8BB8876174F /* Storage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53A7DE17B05FAC23DD027B01 /* Storage.swift */; };
 		D93332AB86CBE960FEA22CA9 /* CSVTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8ECDD404C01103BBF46A1AE /* CSVTests.swift */; };
+		DA9DD3D0F4AF4178696585A1 /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A780A2E2AEFAB77F4703040 /* AppPreferences.swift */; };
+		EFACFD51D6E22BAFAB7C4EBD /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D663E54A0487AAF52CAA4798 /* SettingsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -34,22 +39,27 @@
 
 /* Begin PBXFileReference section */
 		0285268E0845ABE709CB5219 /* EntrySheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntrySheet.swift; sourceTree = "<group>"; };
+		1A780A2E2AEFAB77F4703040 /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
 		20DFC7E015F2F76D556536AA /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		219FE6AC1ED5702087A4C454 /* DayViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayViewModel.swift; sourceTree = "<group>"; };
 		2723FE985A198A989329F1EC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		325415D88E4E142B396BAC3C /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		40AF4B24886816E74D211668 /* Hoursapp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Hoursapp.entitlements; sourceTree = "<group>"; };
+		4F0E09E6EA9D7C31BBA66D3C /* IdleDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdleDetector.swift; sourceTree = "<group>"; };
 		53A7DE17B05FAC23DD027B01 /* Storage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Storage.swift; sourceTree = "<group>"; };
 		5804DCDC71B500337E741660 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		604B30AE4535981EF1467680 /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
 		6EE3E96AD447C3F249CBBE7D /* HoursappApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoursappApp.swift; sourceTree = "<group>"; };
 		7E423F04005A83FE96D8F3D2 /* Hoursapp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hoursapp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		899365942FEA1EEA7E3920F4 /* CSV.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSV.swift; sourceTree = "<group>"; };
+		8A0D162DF65F3D7DC3BD1BB4 /* LaunchAtLogin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLogin.swift; sourceTree = "<group>"; };
 		914725E067D738B9A189BAF9 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		A93F34B4395079B130275A46 /* StorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageTests.swift; sourceTree = "<group>"; };
+		D663E54A0487AAF52CAA4798 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		D8CFE355A4CD538A7A547BFC /* HoursappTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HoursappTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D8ECDD404C01103BBF46A1AE /* CSVTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVTests.swift; sourceTree = "<group>"; };
 		DA61E67A38EA599B05924639 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		DD7E0C26F2E8E0E320BF7DBE /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -57,6 +67,7 @@
 			isa = PBXGroup;
 			children = (
 				325415D88E4E142B396BAC3C /* AppDelegate.swift */,
+				1A780A2E2AEFAB77F4703040 /* AppPreferences.swift */,
 				2723FE985A198A989329F1EC /* Assets.xcassets */,
 				DA61E67A38EA599B05924639 /* ContentView.swift */,
 				899365942FEA1EEA7E3920F4 /* CSV.swift */,
@@ -64,9 +75,13 @@
 				0285268E0845ABE709CB5219 /* EntrySheet.swift */,
 				40AF4B24886816E74D211668 /* Hoursapp.entitlements */,
 				6EE3E96AD447C3F249CBBE7D /* HoursappApp.swift */,
+				4F0E09E6EA9D7C31BBA66D3C /* IdleDetector.swift */,
 				5804DCDC71B500337E741660 /* Info.plist */,
+				8A0D162DF65F3D7DC3BD1BB4 /* LaunchAtLogin.swift */,
 				604B30AE4535981EF1467680 /* MenuBarController.swift */,
 				914725E067D738B9A189BAF9 /* Models.swift */,
+				D663E54A0487AAF52CAA4798 /* SettingsView.swift */,
+				DD7E0C26F2E8E0E320BF7DBE /* SettingsWindowController.swift */,
 				53A7DE17B05FAC23DD027B01 /* Storage.swift */,
 				20DFC7E015F2F76D556536AA /* Theme.swift */,
 			);
@@ -195,13 +210,18 @@
 			buildActionMask = 2147483647;
 			files = (
 				4086E91D4343AB7AF0C165CC /* AppDelegate.swift in Sources */,
+				DA9DD3D0F4AF4178696585A1 /* AppPreferences.swift in Sources */,
 				2839650D95C3C46BC14F7DAF /* CSV.swift in Sources */,
 				8B92ECF8872245F993C2BB8B /* ContentView.swift in Sources */,
 				083750E2CF7C20A38307952C /* DayViewModel.swift in Sources */,
 				248F2A8BF50E8876BF987CD4 /* EntrySheet.swift in Sources */,
 				C901366E8DCED5540022105C /* HoursappApp.swift in Sources */,
+				0DD66434492EDE731E45B9F7 /* IdleDetector.swift in Sources */,
+				5882160E582579CE2931F4E7 /* LaunchAtLogin.swift in Sources */,
 				0FC7400029712968F3C501E2 /* MenuBarController.swift in Sources */,
 				4A1C085D7628A8B37CD12C4E /* Models.swift in Sources */,
+				EFACFD51D6E22BAFAB7C4EBD /* SettingsView.swift in Sources */,
+				90C994774BA0C8826D9023CD /* SettingsWindowController.swift in Sources */,
 				C97D37CF16BCA8BB8876174F /* Storage.swift in Sources */,
 				9A295A83C3BD5222495F55B4 /* Theme.swift in Sources */,
 			);

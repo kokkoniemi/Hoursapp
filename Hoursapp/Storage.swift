@@ -135,6 +135,21 @@ final class Storage {
         return DateFormat.timestampFormatter.date(from: started)
     }
 
+    func discardRunningIdle(seconds: Int) {
+        guard let i = entries.firstIndex(where: { $0.isRunning }),
+              let started = entries[i].startedAt,
+              let startDate = DateFormat.timestampFormatter.date(from: started) else { return }
+        let bumped = startDate.addingTimeInterval(TimeInterval(seconds))
+        let safe = min(bumped, .now)
+        entries[i].startedAt = DateFormat.timestamp(from: safe)
+        scheduleSaveEntries()
+    }
+
+    func stopTimerDiscardingIdle(seconds: Int) {
+        discardRunningIdle(seconds: seconds)
+        stopTimer()
+    }
+
     func todayTotalSeconds(at now: Date = .now) -> Int {
         let today = DateFormat.day(from: now)
         return entries.filter { $0.date == today }
