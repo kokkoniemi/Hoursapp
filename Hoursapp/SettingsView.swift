@@ -4,6 +4,9 @@ struct SettingsView: View {
     @AppStorage(PrefKey.launchAtLogin) private var launchAtLogin = false
     @AppStorage(PrefKey.idleDetectionEnabled) private var idleDetectionEnabled = true
     @AppStorage(PrefKey.idleThresholdMinutes) private var idleThresholdMinutes = 45
+    @AppStorage(PrefKey.pauseOnSleep) private var pauseOnSleep = true
+    @AppStorage(PrefKey.longRunWarningEnabled) private var longRunWarningEnabled = true
+    @AppStorage(PrefKey.longRunWarningHours) private var longRunWarningHours = 8
 
     var body: some View {
         Form {
@@ -28,9 +31,28 @@ struct SettingsView: View {
                 }
                 .disabled(!idleDetectionEnabled)
             }
+
+            Section("Sleep / wake") {
+                Toggle("Pause timer when Mac sleeps and resume on wake", isOn: $pauseOnSleep)
+            }
+
+            Section("Long-running timer") {
+                Toggle("Warn when a timer runs for too long", isOn: $longRunWarningEnabled)
+
+                HStack {
+                    Text("Warning threshold")
+                    Spacer()
+                    Text("\(longRunWarningHours) hours")
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                    Stepper("", value: $longRunWarningHours, in: 1...24, step: 1)
+                        .labelsHidden()
+                }
+                .disabled(!longRunWarningEnabled)
+            }
         }
         .formStyle(.grouped)
-        .frame(width: 440, height: 240)
+        .frame(width: 440, height: 440)
         .onAppear {
             launchAtLogin = LaunchAtLogin.isEnabled
         }

@@ -14,5 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         menuBarController = MenuBarController()
         IdleDetector.shared.start()
+        SleepWatcher.shared.start()
+        LongRunDetector.shared.start()
     }
 }
