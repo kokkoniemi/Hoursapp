@@ -53,11 +53,11 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
     }
 
     private static func makeClockIcon(at date: Date, running: Bool) -> NSImage {
-        let size: CGFloat = 18
+        let size: CGFloat = 22
         let image = NSImage(size: NSSize(width: size, height: size), flipped: false) { rect in
             if running {
                 NSColor.controlAccentColor.setFill()
-                NSBezierPath(roundedRect: rect.insetBy(dx: 1, dy: 1), xRadius: 4, yRadius: 4).fill()
+                NSBezierPath(ovalIn: rect.insetBy(dx: 1, dy: 1)).fill()
             }
 
             let center = NSPoint(x: rect.midX, y: rect.midY)

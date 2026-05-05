@@ -17,7 +17,6 @@ struct ContentView: View {
             }
             .frame(width: 480, height: 640)
         }
-        .background(Color(nsColor: .windowBackgroundColor))
         .sheet(item: $sheet) { item in
             EntrySheet(sheet: item) { sheet = nil }
         }
