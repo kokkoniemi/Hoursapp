@@ -8,20 +8,41 @@
 
 /* Begin PBXBuildFile section */
 		0FC7400029712968F3C501E2 /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 604B30AE4535981EF1467680 /* MenuBarController.swift */; };
+		2839650D95C3C46BC14F7DAF /* CSV.swift in Sources */ = {isa = PBXBuildFile; fileRef = 899365942FEA1EEA7E3920F4 /* CSV.swift */; };
 		4086E91D4343AB7AF0C165CC /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 325415D88E4E142B396BAC3C /* AppDelegate.swift */; };
+		4A1C085D7628A8B37CD12C4E /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 914725E067D738B9A189BAF9 /* Models.swift */; };
 		8B92ECF8872245F993C2BB8B /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA61E67A38EA599B05924639 /* ContentView.swift */; };
 		A366D3B0AD82933F60D90019 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2723FE985A198A989329F1EC /* Assets.xcassets */; };
 		C901366E8DCED5540022105C /* HoursappApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EE3E96AD447C3F249CBBE7D /* HoursappApp.swift */; };
+		C9593BABA387A1A30399F5EA /* StorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A93F34B4395079B130275A46 /* StorageTests.swift */; };
+		C97D37CF16BCA8BB8876174F /* Storage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53A7DE17B05FAC23DD027B01 /* Storage.swift */; };
+		D93332AB86CBE960FEA22CA9 /* CSVTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8ECDD404C01103BBF46A1AE /* CSVTests.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		8CC308D441631968632BBC0E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 052C15B52058CACB95AA0A61 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 15F172C1704BBEF720673FF9;
+			remoteInfo = Hoursapp;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		2723FE985A198A989329F1EC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		325415D88E4E142B396BAC3C /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		40AF4B24886816E74D211668 /* Hoursapp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Hoursapp.entitlements; sourceTree = "<group>"; };
+		53A7DE17B05FAC23DD027B01 /* Storage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Storage.swift; sourceTree = "<group>"; };
 		5804DCDC71B500337E741660 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		604B30AE4535981EF1467680 /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
 		6EE3E96AD447C3F249CBBE7D /* HoursappApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoursappApp.swift; sourceTree = "<group>"; };
 		7E423F04005A83FE96D8F3D2 /* Hoursapp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hoursapp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		899365942FEA1EEA7E3920F4 /* CSV.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSV.swift; sourceTree = "<group>"; };
+		914725E067D738B9A189BAF9 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		A93F34B4395079B130275A46 /* StorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageTests.swift; sourceTree = "<group>"; };
+		D8CFE355A4CD538A7A547BFC /* HoursappTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HoursappTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D8ECDD404C01103BBF46A1AE /* CSVTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVTests.swift; sourceTree = "<group>"; };
 		DA61E67A38EA599B05924639 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -32,10 +53,13 @@
 				325415D88E4E142B396BAC3C /* AppDelegate.swift */,
 				2723FE985A198A989329F1EC /* Assets.xcassets */,
 				DA61E67A38EA599B05924639 /* ContentView.swift */,
+				899365942FEA1EEA7E3920F4 /* CSV.swift */,
 				40AF4B24886816E74D211668 /* Hoursapp.entitlements */,
 				6EE3E96AD447C3F249CBBE7D /* HoursappApp.swift */,
 				5804DCDC71B500337E741660 /* Info.plist */,
 				604B30AE4535981EF1467680 /* MenuBarController.swift */,
+				914725E067D738B9A189BAF9 /* Models.swift */,
+				53A7DE17B05FAC23DD027B01 /* Storage.swift */,
 			);
 			path = Hoursapp;
 			sourceTree = "<group>";
@@ -44,6 +68,7 @@
 			isa = PBXGroup;
 			children = (
 				78307D18A12B940C21F1D511 /* Hoursapp */,
+				F2124CE4E4F8281CBDF16E39 /* HoursappTests */,
 				EC7B11E789F69490A96D5E79 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -52,8 +77,18 @@
 			isa = PBXGroup;
 			children = (
 				7E423F04005A83FE96D8F3D2 /* Hoursapp.app */,
+				D8CFE355A4CD538A7A547BFC /* HoursappTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		F2124CE4E4F8281CBDF16E39 /* HoursappTests */ = {
+			isa = PBXGroup;
+			children = (
+				D8ECDD404C01103BBF46A1AE /* CSVTests.swift */,
+				A93F34B4395079B130275A46 /* StorageTests.swift */,
+			);
+			path = HoursappTests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -77,6 +112,24 @@
 			productReference = 7E423F04005A83FE96D8F3D2 /* Hoursapp.app */;
 			productType = "com.apple.product-type.application";
 		};
+		CB930398B2D57CD75EB6722B /* HoursappTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9008E544EA9CF4EEFB3FC832 /* Build configuration list for PBXNativeTarget "HoursappTests" */;
+			buildPhases = (
+				96E68D9D4CEC432B4B7F8B78 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				3370BF71D4364E57BA4C7F51 /* PBXTargetDependency */,
+			);
+			name = HoursappTests;
+			packageProductDependencies = (
+			);
+			productName = HoursappTests;
+			productReference = D8CFE355A4CD538A7A547BFC /* HoursappTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -87,6 +140,10 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					15F172C1704BBEF720673FF9 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+					CB930398B2D57CD75EB6722B = {
 						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
@@ -107,6 +164,7 @@
 			projectRoot = "";
 			targets = (
 				15F172C1704BBEF720673FF9 /* Hoursapp */,
+				CB930398B2D57CD75EB6722B /* HoursappTests */,
 			);
 		};
 /* End PBXProject section */
@@ -128,13 +186,33 @@
 			buildActionMask = 2147483647;
 			files = (
 				4086E91D4343AB7AF0C165CC /* AppDelegate.swift in Sources */,
+				2839650D95C3C46BC14F7DAF /* CSV.swift in Sources */,
 				8B92ECF8872245F993C2BB8B /* ContentView.swift in Sources */,
 				C901366E8DCED5540022105C /* HoursappApp.swift in Sources */,
 				0FC7400029712968F3C501E2 /* MenuBarController.swift in Sources */,
+				4A1C085D7628A8B37CD12C4E /* Models.swift in Sources */,
+				C97D37CF16BCA8BB8876174F /* Storage.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		96E68D9D4CEC432B4B7F8B78 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D93332AB86CBE960FEA22CA9 /* CSVTests.swift in Sources */,
+				C9593BABA387A1A30399F5EA /* StorageTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		3370BF71D4364E57BA4C7F51 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 15F172C1704BBEF720673FF9 /* Hoursapp */;
+			targetProxy = 8CC308D441631968632BBC0E /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		55ABD5874F9415D95B1E4264 /* Debug */ = {
@@ -294,6 +372,40 @@
 			};
 			name = Release;
 		};
+		848D86CACB6C633CD56AC691 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.mikko.hoursapp.tests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Hoursapp.app/Contents/MacOS/Hoursapp";
+			};
+			name = Release;
+		};
+		A564B25FE2D4A4A42750F942 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.mikko.hoursapp.tests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Hoursapp.app/Contents/MacOS/Hoursapp";
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -311,6 +423,15 @@
 			buildConfigurations = (
 				55ABD5874F9415D95B1E4264 /* Debug */,
 				5EC7832EB8BB8BB0D107359B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		9008E544EA9CF4EEFB3FC832 /* Build configuration list for PBXNativeTarget "HoursappTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A564B25FE2D4A4A42750F942 /* Debug */,
+				848D86CACB6C633CD56AC691 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

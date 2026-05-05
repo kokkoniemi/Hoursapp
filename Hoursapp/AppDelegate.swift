@@ -5,6 +5,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuBarController: MenuBarController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        do {
+            try Storage.shared.bootstrap()
+        } catch {
+            NSLog("Hoursapp storage bootstrap failed: \(error)")
+        }
         menuBarController = MenuBarController()
     }
 }
