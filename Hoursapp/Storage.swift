@@ -155,6 +155,18 @@ final class Storage {
         return entry.seconds + max(0, Int(now.timeIntervalSince(startDate)))
     }
 
+    func mostRecentEntry() -> Entry? {
+        entries.last
+    }
+
+    func mostRecentEntry(client: String) -> Entry? {
+        entries.last(where: { $0.client == client })
+    }
+
+    func mostRecentEntry(client: String, project: String) -> Entry? {
+        entries.last(where: { $0.client == client && $0.project == project })
+    }
+
     func runningStartedAtDate() -> Date? {
         guard let started = runningEntry()?.startedAt else { return nil }
         return DateFormat.timestampFormatter.date(from: started)

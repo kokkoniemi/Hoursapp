@@ -24,6 +24,7 @@ struct EntrySheet: View {
     @State private var seconds: Int
     @State private var notes: String
     @State private var showDeleteConfirm = false
+    @FocusState private var hoursFocused: Bool
 
     private let originalEntry: Entry?
     private let date: String
@@ -35,19 +36,31 @@ struct EntrySheet: View {
         case .new(let date):
             self.originalEntry = nil
             self.date = date
-            _client = State(initialValue: "")
-            _project = State(initialValue: "")
-            _task = State(initialValue: "")
+            let last = Storage.shared.mostRecentEntry()
+            _client = State(initialValue: last?.client ?? "")
+            _project = State(initialValue: last?.project ?? "")
+            _task = State(initialValue: last?.task ?? "")
             _seconds = State(initialValue: 0)
             _notes = State(initialValue: "")
         case .edit(let entry):
             self.originalEntry = entry
             self.date = entry.date
+            let siblings = Storage.shared.entries.filter {
+                $0.date == entry.date &&
+                $0.client == entry.client &&
+                $0.project == entry.project &&
+                $0.task == entry.task
+            }
+            let combinedSeconds = siblings.reduce(0) { $0 + $1.seconds }
+            let combinedNotes = siblings
+                .map(\.notes)
+                .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+                .joined(separator: "\n")
             _client = State(initialValue: entry.client)
             _project = State(initialValue: entry.project)
             _task = State(initialValue: entry.task)
-            _seconds = State(initialValue: entry.seconds)
-            _notes = State(initialValue: entry.notes)
+            _seconds = State(initialValue: combinedSeconds)
+            _notes = State(initialValue: combinedNotes)
         }
     }
 
@@ -62,6 +75,8 @@ struct EntrySheet: View {
     private var canSave: Bool {
         !trimmedClient.isEmpty && !trimmedProject.isEmpty && !trimmedTask.isEmpty && seconds >= 0
     }
+
+    private var isEditing: Bool { originalEntry != nil }
 
     private var favoriteBinding: Binding<Bool> {
         Binding(
@@ -78,8 +93,6 @@ struct EntrySheet: View {
         )
     }
 
-    private var isEditing: Bool { originalEntry != nil }
-
     var body: some View {
         VStack(spacing: 0) {
             HStack {
@@ -92,10 +105,10 @@ struct EntrySheet: View {
             Divider()
 
             VStack(alignment: .leading, spacing: 10) {
-                LookupField(title: "Client", options: clients, selection: $client)
-                LookupField(title: "Project", options: projects, selection: $project)
-                LookupField(title: "Task", options: tasks, selection: $task)
-                HoursField(seconds: $seconds)
+                PickerField(title: "Client", options: clients, selection: $client)
+                PickerField(title: "Project", options: projects, selection: $project)
+                PickerField(title: "Task", options: tasks, selection: $task)
+                HoursField(seconds: $seconds, isFocused: $hoursFocused)
                 NotesField(text: $notes)
                 FavoriteRow(isOn: favoriteBinding, isEnabled: canSave)
             }
@@ -121,6 +134,20 @@ struct EntrySheet: View {
             .padding()
         }
         .frame(width: 400, height: 380)
+        .onAppear {
+            if isEditing || canSave {
+                Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 50_000_000)
+                    hoursFocused = true
+                }
+            }
+        }
+        .onChange(of: client) { _, newClient in
+            cascadeFromClient(newClient)
+        }
+        .onChange(of: project) { _, newProject in
+            cascadeFromProject(newProject)
+        }
         .confirmationDialog("Delete this entry?", isPresented: $showDeleteConfirm) {
             Button("Delete", role: .destructive) {
                 if let id = originalEntry?.id {
@@ -132,34 +159,110 @@ struct EntrySheet: View {
         }
     }
 
+    private func cascadeFromClient(_ newClient: String) {
+        guard !newClient.isEmpty else { return }
+        let projectsForClient = storage.projects(for: newClient)
+        if !projectsForClient.contains(project) {
+            if let recent = storage.mostRecentEntry(client: newClient) {
+                project = recent.project
+                task = recent.task
+            } else {
+                project = projectsForClient.first ?? ""
+                task = ""
+            }
+        }
+    }
+
+    private func cascadeFromProject(_ newProject: String) {
+        guard !newProject.isEmpty, !client.isEmpty else { return }
+        if task.isEmpty || !storage.taskNames().contains(task) {
+            if let recent = storage.mostRecentEntry(client: client, project: newProject) {
+                task = recent.task
+            }
+        }
+    }
+
     private func save() {
         storage.addClient(ClientProject(client: trimmedClient, project: trimmedProject))
         storage.addTask(TaskType(name: trimmedTask))
 
-        let now = DateFormat.timestamp(from: .now)
-        let started = originalEntry?.startedAt
-        let stopped = originalEntry?.stoppedAt ?? now
+        let isEditingSameCombo = isEditing &&
+            originalEntry!.date == date &&
+            originalEntry!.client == trimmedClient &&
+            originalEntry!.project == trimmedProject &&
+            originalEntry!.task == trimmedTask
 
-        let entry = Entry(
-            id: originalEntry?.id ?? UUID().uuidString,
+        if isEditing, !isEditingSameCombo {
+            let oldGroup = storage.entries.filter {
+                $0.date == originalEntry!.date &&
+                $0.client == originalEntry!.client &&
+                $0.project == originalEntry!.project &&
+                $0.task == originalEntry!.task
+            }
+            for entry in oldGroup {
+                storage.deleteEntry(id: entry.id)
+            }
+        }
+
+        let targetSiblings = storage.entries.filter {
+            $0.date == date &&
+            $0.client == trimmedClient &&
+            $0.project == trimmedProject &&
+            $0.task == trimmedTask
+        }
+
+        let finalSeconds: Int
+        let finalNotes: String
+        if isEditingSameCombo {
+            finalSeconds = seconds
+            finalNotes = notes
+        } else {
+            finalSeconds = targetSiblings.reduce(0) { $0 + $1.seconds } + seconds
+            let existingNotes = targetSiblings
+                .map(\.notes)
+                .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+                .joined(separator: "\n")
+            let entered = notes.trimmingCharacters(in: .whitespaces)
+            finalNotes = [existingNotes, entered]
+                .filter { !$0.isEmpty }
+                .joined(separator: "\n")
+        }
+
+        let keepId: String = isEditingSameCombo
+            ? originalEntry!.id
+            : (targetSiblings.first?.id ?? UUID().uuidString)
+
+        for sibling in targetSiblings where sibling.id != keepId {
+            storage.deleteEntry(id: sibling.id)
+        }
+
+        let earliestStarted = targetSiblings.compactMap(\.startedAt).min()
+            ?? originalEntry?.startedAt
+        let nowText = DateFormat.timestamp(from: .now)
+
+        storage.upsertEntry(Entry(
+            id: keepId,
             date: date,
             client: trimmedClient,
             project: trimmedProject,
             task: trimmedTask,
-            seconds: seconds,
-            notes: notes,
-            startedAt: started,
-            stoppedAt: stopped
-        )
-        storage.upsertEntry(entry)
+            seconds: finalSeconds,
+            notes: finalNotes,
+            startedAt: earliestStarted,
+            stoppedAt: nowText
+        ))
         onDismiss()
     }
 }
 
-private struct LookupField: View {
+private struct PickerField: View {
     let title: String
     let options: [String]
     @Binding var selection: String
+
+    @State private var isAdding = false
+    @State private var newValue = ""
+    @FocusState private var newValueFocused: Bool
 
     var body: some View {
         HStack {
@@ -167,33 +270,83 @@ private struct LookupField: View {
                 .frame(width: 64, alignment: .trailing)
                 .foregroundStyle(.secondary)
 
-            TextField(title, text: $selection)
-                .textFieldStyle(.roundedBorder)
+            if isAdding {
+                TextField("New \(title.lowercased())", text: $newValue)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(maxWidth: .infinity)
+                    .focused($newValueFocused)
+                    .onSubmit { commitNew() }
 
-            Menu {
-                if options.isEmpty {
-                    Text("No saved \(title.lowercased())s yet")
-                } else {
+                Button {
+                    cancelNew()
+                } label: {
+                    Image(systemName: "xmark")
+                }
+                .buttonStyle(.borderless)
+                .help("Cancel")
+            } else {
+                Picker("", selection: $selection) {
+                    if selection.isEmpty {
+                        Text("Choose…").tag("")
+                    } else if !options.contains(selection) {
+                        Text(selection).tag(selection)
+                    }
                     ForEach(options, id: \.self) { option in
-                        Button(option) { selection = option }
+                        Text(option).tag(option)
                     }
                 }
-            } label: {
-                Image(systemName: "chevron.down")
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .frame(maxWidth: .infinity)
+
+                Button {
+                    enterAddingMode()
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .buttonStyle(.borderless)
+                .help("Add new \(title.lowercased())")
             }
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
-            .fixedSize()
         }
+        .onAppear {
+            if options.isEmpty && selection.isEmpty {
+                enterAddingMode()
+            }
+        }
+    }
+
+    private func enterAddingMode() {
+        isAdding = true
+        newValue = ""
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 30_000_000)
+            newValueFocused = true
+        }
+    }
+
+    private func commitNew() {
+        let trimmed = newValue.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else {
+            cancelNew()
+            return
+        }
+        selection = trimmed
+        isAdding = false
+        newValue = ""
+    }
+
+    private func cancelNew() {
+        isAdding = false
+        newValue = ""
     }
 }
 
 private struct HoursField: View {
     @Binding var seconds: Int
+    @FocusState.Binding var isFocused: Bool
 
     @State private var text: String = ""
     @State private var initialized = false
-    @FocusState private var focused: Bool
 
     var body: some View {
         HStack {
@@ -203,18 +356,17 @@ private struct HoursField: View {
 
             TextField("0:00", text: $text)
                 .textFieldStyle(.roundedBorder)
-                .focused($focused)
+                .frame(maxWidth: .infinity)
+                .focused($isFocused)
                 .onAppear {
                     guard !initialized else { return }
                     text = format(seconds)
                     initialized = true
                 }
-                .onChange(of: focused) { _, nowFocused in
+                .onChange(of: isFocused) { _, nowFocused in
                     if !nowFocused { commit() }
                 }
                 .onSubmit { commit() }
-
-            Spacer()
         }
     }
 
