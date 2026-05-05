@@ -27,7 +27,7 @@ final class Storage {
     private static let entriesHeader = ["id", "date", "client", "project", "task", "seconds", "notes", "started_at", "stopped_at"]
     private static let favoritesHeader = ["client", "project", "task"]
 
-    init(directory: URL = URL(filePath: NSHomeDirectory()).appending(path: ".hourapp")) {
+    init(directory: URL = URL(filePath: NSHomeDirectory()).appending(path: ".hoursapp")) {
         self.directory = directory
         self.clientsURL = directory.appending(path: "clients.csv")
         self.tasksURL = directory.appending(path: "tasks.csv")

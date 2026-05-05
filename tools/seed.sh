@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Populate ~/.hourapp/ with sample data for visual testing.
+# Populate ~/.hoursapp/ with sample data for visual testing.
 # Wipes existing files. Run before launching Hoursapp to see a populated UI.
 set -euo pipefail
 
-DIR="$HOME/.hourapp"
+DIR="$HOME/.hoursapp"
 mkdir -p "$DIR"
 TODAY="$(date +%Y-%m-%d)"
 NOW_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
