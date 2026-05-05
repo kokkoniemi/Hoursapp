@@ -50,6 +50,18 @@ final class DayViewModel {
 
     var dayTitle: String { Self.titleFormatter.string(from: selectedDate) }
 
+    var dayKey: String { DateFormat.day(from: selectedDate) }
+
+    func entries(for group: EntryGroup) -> [Entry] {
+        let key = dayKey
+        return storage.entries.filter {
+            $0.date == key &&
+            $0.client == group.client &&
+            $0.project == group.project &&
+            $0.task == group.task
+        }
+    }
+
     var weekDays: [WeekDay] {
         guard let interval = calendar.dateInterval(of: .weekOfYear, for: selectedDate) else { return [] }
         return (0..<7).compactMap { offset in

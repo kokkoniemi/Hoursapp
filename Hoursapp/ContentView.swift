@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var model = DayViewModel(storage: .shared)
+    @State private var sheet: EditSheet?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -9,12 +10,15 @@ struct ContentView: View {
             Divider()
             WeekStripView(model: model)
             Divider()
-            EntriesListView(model: model)
+            EntriesListView(model: model, sheet: $sheet)
             Divider()
-            FooterView()
+            FooterView(sheet: $sheet, dayKey: model.dayKey)
         }
         .frame(width: 480, height: 640)
         .background(Color(nsColor: .windowBackgroundColor))
+        .sheet(item: $sheet) { item in
+            EntrySheet(sheet: item) { sheet = nil }
+        }
     }
 }
 
@@ -109,6 +113,7 @@ private struct DayPill: View {
 
 private struct EntriesListView: View {
     let model: DayViewModel
+    @Binding var sheet: EditSheet?
 
     var body: some View {
         if model.groupedEntries.isEmpty {
@@ -119,6 +124,12 @@ private struct EntriesListView: View {
                 LazyVStack(spacing: 0) {
                     ForEach(Array(model.groupedEntries.enumerated()), id: \.element.id) { index, group in
                         EntryRow(group: group)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                if let entry = model.entries(for: group).first {
+                                    sheet = .edit(entry)
+                                }
+                            }
                         if index < model.groupedEntries.count - 1 {
                             Divider()
                         }
@@ -179,13 +190,19 @@ private struct EmptyDayView: View {
 }
 
 private struct FooterView: View {
+    @Binding var sheet: EditSheet?
+    let dayKey: String
+
     var body: some View {
         HStack(spacing: 14) {
-            Button { } label: {
+            Button {
+                sheet = .new(date: dayKey)
+            } label: {
                 Image(systemName: "plus")
             }
             .buttonStyle(.borderless)
-            .help("Add entry (Phase 3)")
+            .help("Add entry")
+            .keyboardShortcut("n", modifiers: [.command])
 
             Button { } label: {
                 Image(systemName: "star")
