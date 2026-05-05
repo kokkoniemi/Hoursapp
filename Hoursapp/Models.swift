@@ -9,6 +9,12 @@ struct TaskType: Hashable, Sendable {
     var name: String
 }
 
+struct Favorite: Hashable, Sendable {
+    var client: String
+    var project: String
+    var task: String
+}
+
 struct Entry: Identifiable, Hashable, Sendable {
     var id: String
     var date: String

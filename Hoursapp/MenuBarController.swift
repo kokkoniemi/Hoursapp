@@ -32,7 +32,8 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
         guard let button = statusItem.button else { return }
         button.imagePosition = .imageLeading
         button.target = self
-        button.action = #selector(togglePopover(_:))
+        button.action = #selector(handleClick(_:))
+        button.sendAction(on: [.leftMouseUp, .rightMouseUp])
     }
 
     private func startTicker() {
@@ -112,7 +113,16 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
         return image
     }
 
-    @objc private func togglePopover(_ sender: Any?) {
+    @objc private func handleClick(_ sender: Any?) {
+        let event = NSApp.currentEvent
+        if event?.type == .rightMouseUp {
+            showQuickAddMenu()
+        } else {
+            togglePopover(sender)
+        }
+    }
+
+    private func togglePopover(_ sender: Any?) {
         guard let button = statusItem.button else { return }
         if popover.isShown {
             popover.performClose(sender)
@@ -120,5 +130,71 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             popover.contentViewController?.view.window?.makeKey()
         }
+    }
+
+    private func showQuickAddMenu() {
+        let menu = NSMenu()
+
+        let storage = Storage.shared
+        let today = DateFormat.day(from: .now)
+
+        let recent = storage.entries
+            .filter { $0.date == today }
+            .reduce(into: [Favorite]()) { acc, entry in
+                let f = Favorite(client: entry.client, project: entry.project, task: entry.task)
+                if !acc.contains(f) { acc.append(f) }
+            }
+
+        if !recent.isEmpty {
+            menu.addItem(NSMenuItem.sectionHeader(title: "Today"))
+            for fav in recent {
+                menu.addItem(makeQuickAddItem(for: fav))
+            }
+        }
+
+        let favorites = storage.favorites
+        if !favorites.isEmpty {
+            if !recent.isEmpty { menu.addItem(.separator()) }
+            menu.addItem(NSMenuItem.sectionHeader(title: "Favorites"))
+            for fav in favorites {
+                menu.addItem(makeQuickAddItem(for: fav))
+            }
+        }
+
+        if storage.runningEntry() != nil {
+            menu.addItem(.separator())
+            let stop = NSMenuItem(title: "Stop timer", action: #selector(stopRunningTimer), keyEquivalent: "")
+            stop.target = self
+            menu.addItem(stop)
+        }
+
+        if menu.items.isEmpty {
+            menu.addItem(NSMenuItem(title: "No favorites yet — add one in the entry sheet", action: nil, keyEquivalent: ""))
+        }
+
+        if let button = statusItem.button {
+            menu.popUp(positioning: nil, at: NSPoint(x: 0, y: button.bounds.maxY + 5), in: button)
+        }
+    }
+
+    private func makeQuickAddItem(for fav: Favorite) -> NSMenuItem {
+        let item = NSMenuItem(
+            title: "\(fav.client) — \(fav.project) — \(fav.task)",
+            action: #selector(quickAddSelected(_:)),
+            keyEquivalent: ""
+        )
+        item.representedObject = fav
+        item.target = self
+        return item
+    }
+
+    @objc private func quickAddSelected(_ sender: NSMenuItem) {
+        guard let fav = sender.representedObject as? Favorite else { return }
+        let today = DateFormat.day(from: .now)
+        Storage.shared.startTimer(client: fav.client, project: fav.project, task: fav.task, on: today)
+    }
+
+    @objc private func stopRunningTimer() {
+        Storage.shared.stopTimer()
     }
 }

@@ -63,6 +63,21 @@ struct EntrySheet: View {
         !trimmedClient.isEmpty && !trimmedProject.isEmpty && !trimmedTask.isEmpty && seconds >= 0
     }
 
+    private var favoriteBinding: Binding<Bool> {
+        Binding(
+            get: {
+                guard canSave else { return false }
+                return storage.isFavorite(client: trimmedClient, project: trimmedProject, task: trimmedTask)
+            },
+            set: { newValue in
+                guard canSave else { return }
+                let fav = Favorite(client: trimmedClient, project: trimmedProject, task: trimmedTask)
+                if newValue { storage.addFavorite(fav) }
+                else { storage.removeFavorite(fav) }
+            }
+        )
+    }
+
     private var isEditing: Bool { originalEntry != nil }
 
     var body: some View {
@@ -82,6 +97,7 @@ struct EntrySheet: View {
                 LookupField(title: "Task", options: tasks, selection: $task)
                 HoursField(seconds: $seconds)
                 NotesField(text: $notes)
+                FavoriteRow(isOn: favoriteBinding, isEnabled: canSave)
             }
             .padding()
 
@@ -225,6 +241,23 @@ private struct HoursField: View {
 
     private func format(_ seconds: Int) -> String {
         TimeFormat.hoursMinutes(seconds)
+    }
+}
+
+private struct FavoriteRow: View {
+    @Binding var isOn: Bool
+    let isEnabled: Bool
+
+    var body: some View {
+        HStack {
+            Color.clear.frame(width: 64)
+            Toggle(isOn: $isOn) {
+                Label("Favorite", systemImage: isOn ? "star.fill" : "star")
+            }
+            .toggleStyle(.checkbox)
+            .disabled(!isEnabled)
+            Spacer()
+        }
     }
 }
 

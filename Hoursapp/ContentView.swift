@@ -223,11 +223,29 @@ private struct FooterView: View {
             .help("Add entry")
             .keyboardShortcut("n", modifiers: [.command])
 
-            Button { } label: {
+            Menu {
+                let favorites = Storage.shared.favorites
+                if favorites.isEmpty {
+                    Text("No favorites yet")
+                } else {
+                    ForEach(favorites, id: \.self) { fav in
+                        Button("\(fav.client) — \(fav.project) — \(fav.task)") {
+                            Storage.shared.startTimer(
+                                client: fav.client,
+                                project: fav.project,
+                                task: fav.task,
+                                on: dayKey
+                            )
+                        }
+                    }
+                }
+            } label: {
                 Image(systemName: "star")
             }
-            .buttonStyle(.borderless)
-            .help("Favorites (Phase 5)")
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .help("Start timer for a favorite")
 
             Spacer()
 

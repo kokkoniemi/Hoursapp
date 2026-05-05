@@ -109,6 +109,31 @@ struct StorageTests {
         #expect(storage.tasks.count == 1)
     }
 
+    @Test("favorites round-trip and idempotent add/remove")
+    func favoritesRoundTrip() async throws {
+        let dir = Self.tempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        do {
+            let storage = Storage(directory: dir)
+            try storage.bootstrap()
+            let f = Favorite(client: "Acme", project: "Site", task: "Design")
+            storage.addFavorite(f)
+            storage.addFavorite(f)
+            #expect(storage.favorites == [f])
+            #expect(storage.isFavorite(client: "Acme", project: "Site", task: "Design"))
+            await storage.flushPendingWrites()
+        }
+
+        let reopened = Storage(directory: dir)
+        try reopened.bootstrap()
+        #expect(reopened.favorites == [Favorite(client: "Acme", project: "Site", task: "Design")])
+
+        reopened.removeFavorite(Favorite(client: "Acme", project: "Site", task: "Design"))
+        #expect(reopened.favorites.isEmpty)
+        #expect(!reopened.isFavorite(client: "Acme", project: "Site", task: "Design"))
+    }
+
     @Test("projects(for:) filters by client")
     func projectsForClient() {
         let dir = Self.tempDir()

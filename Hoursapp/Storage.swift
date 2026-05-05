@@ -9,25 +9,30 @@ final class Storage {
     private(set) var clients: [ClientProject] = []
     private(set) var tasks: [TaskType] = []
     private(set) var entries: [Entry] = []
+    private(set) var favorites: [Favorite] = []
 
     private let directory: URL
     private let clientsURL: URL
     private let tasksURL: URL
     private let entriesURL: URL
+    private let favoritesURL: URL
 
     private var saveClientsTask: Task<Void, Never>?
     private var saveTasksTask: Task<Void, Never>?
     private var saveEntriesTask: Task<Void, Never>?
+    private var saveFavoritesTask: Task<Void, Never>?
 
     private static let clientsHeader = ["client", "project"]
     private static let tasksHeader = ["task"]
     private static let entriesHeader = ["id", "date", "client", "project", "task", "seconds", "notes", "started_at", "stopped_at"]
+    private static let favoritesHeader = ["client", "project", "task"]
 
     init(directory: URL = URL(filePath: NSHomeDirectory()).appending(path: ".hourapp")) {
         self.directory = directory
         self.clientsURL = directory.appending(path: "clients.csv")
         self.tasksURL = directory.appending(path: "tasks.csv")
         self.entriesURL = directory.appending(path: "entries.csv")
+        self.favoritesURL = directory.appending(path: "favorites.csv")
     }
 
     func bootstrap() throws {
@@ -35,9 +40,11 @@ final class Storage {
         try ensureFile(at: clientsURL, header: Self.clientsHeader)
         try ensureFile(at: tasksURL, header: Self.tasksHeader)
         try ensureFile(at: entriesURL, header: Self.entriesHeader)
+        try ensureFile(at: favoritesURL, header: Self.favoritesHeader)
         clients = try loadClients()
         tasks = try loadTasks()
         entries = try loadEntries()
+        favorites = try loadFavorites()
     }
 
     func uniqueClientNames() -> [String] {
@@ -68,6 +75,24 @@ final class Storage {
         guard !tasks.contains(task) else { return }
         tasks.append(task)
         scheduleSaveTasks()
+    }
+
+    func addFavorite(_ favorite: Favorite) {
+        guard !favorites.contains(favorite) else { return }
+        favorites.append(favorite)
+        scheduleSaveFavorites()
+    }
+
+    func removeFavorite(_ favorite: Favorite) {
+        let before = favorites.count
+        favorites.removeAll(where: { $0 == favorite })
+        if favorites.count != before {
+            scheduleSaveFavorites()
+        }
+    }
+
+    func isFavorite(client: String, project: String, task: String) -> Bool {
+        favorites.contains(Favorite(client: client, project: project, task: task))
     }
 
     func upsertEntry(_ entry: Entry) {
@@ -176,6 +201,15 @@ final class Storage {
         }
     }
 
+    private func loadFavorites() throws -> [Favorite] {
+        try parseRows(at: favoritesURL).compactMap { cols in
+            guard cols.count >= 3 else { return nil }
+            let f = Favorite(client: cols[0], project: cols[1], task: cols[2])
+            guard !f.client.isEmpty, !f.project.isEmpty, !f.task.isEmpty else { return nil }
+            return f
+        }
+    }
+
     private func loadEntries() throws -> [Entry] {
         try parseRows(at: entriesURL).compactMap { cols in
             guard cols.count >= 9 else { return nil }
@@ -236,10 +270,22 @@ final class Storage {
         }
     }
 
+    private func scheduleSaveFavorites() {
+        saveFavoritesTask?.cancel()
+        let snapshot = favorites
+        let url = favoritesURL
+        saveFavoritesTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(500))
+            if Task.isCancelled { return }
+            self?.write(rows: [Self.favoritesHeader] + snapshot.map { [$0.client, $0.project, $0.task] }, to: url)
+        }
+    }
+
     func flushPendingWrites() async {
         await saveClientsTask?.value
         await saveTasksTask?.value
         await saveEntriesTask?.value
+        await saveFavoritesTask?.value
     }
 
     private func write(rows: [[String]], to url: URL) {
