@@ -405,6 +405,24 @@ private struct PickerField: View {
     }
 }
 
+enum HoursInput {
+    static func parse(_ s: String) -> Int? {
+        let trimmed = s.trimmingCharacters(in: .whitespaces)
+        if trimmed.isEmpty { return 0 }
+        if trimmed.contains(":") {
+            let parts = trimmed.split(separator: ":")
+            guard parts.count == 2,
+                  let h = Int(parts[0]), h >= 0,
+                  let m = Int(parts[1]), m >= 0, m < 60 else { return nil }
+            return h * 3600 + m * 60
+        }
+        if let f = Double(trimmed), f >= 0 {
+            return Int((f * 3600).rounded())
+        }
+        return nil
+    }
+}
+
 private struct HoursField: View {
     @Binding var seconds: Int
     @FocusState.Binding var isFocused: Bool
@@ -443,24 +461,8 @@ private struct HoursField: View {
     }
 
     private func commit() {
-        if let parsed = parse(text) { seconds = parsed }
+        if let parsed = HoursInput.parse(text) { seconds = parsed }
         text = format(seconds)
-    }
-
-    private func parse(_ s: String) -> Int? {
-        let trimmed = s.trimmingCharacters(in: .whitespaces)
-        if trimmed.isEmpty { return 0 }
-        if trimmed.contains(":") {
-            let parts = trimmed.split(separator: ":")
-            guard parts.count == 2,
-                  let h = Int(parts[0]), h >= 0,
-                  let m = Int(parts[1]), m >= 0, m < 60 else { return nil }
-            return h * 3600 + m * 60
-        }
-        if let f = Double(trimmed), f >= 0 {
-            return Int((f * 3600).rounded())
-        }
-        return nil
     }
 
     private func format(_ seconds: Int) -> String {
