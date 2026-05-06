@@ -22,6 +22,13 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
         configureStatusItem()
         startTicker()
         refreshTitle()
+
+        if ProcessInfo.processInfo.environment["HOURSAPP_AUTO_OPEN_POPOVER"] == "1" {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
+                NSApp.activate(ignoringOtherApps: true)
+                self?.togglePopover(nil)
+            }
+        }
     }
 
     deinit {

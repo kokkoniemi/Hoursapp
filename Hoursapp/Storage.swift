@@ -31,8 +31,15 @@ final class Storage {
     private let directory: URL?
     private var database: HoursDatabase!
 
-    init(directory: URL? = URL(filePath: NSHomeDirectory()).appending(path: ".hoursapp")) {
+    init(directory: URL? = Storage.defaultDirectory()) {
         self.directory = directory
+    }
+
+    nonisolated private static func defaultDirectory() -> URL {
+        if let override = ProcessInfo.processInfo.environment["HOURSAPP_DATA_DIR"], !override.isEmpty {
+            return URL(filePath: override)
+        }
+        return URL(filePath: NSHomeDirectory()).appending(path: ".hoursapp")
     }
 
     init(database: HoursDatabase) {

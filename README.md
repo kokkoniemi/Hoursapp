@@ -2,6 +2,10 @@
 
 A minimal macOS menu-bar time tracker. Lives entirely in your menu bar, stores everything in a local SQLite database under `~/.hoursapp/`, no accounts or cloud.
 
+<p align="center">
+  <img src="docs/screenshot.png" alt="Hoursapp popover" width="420">
+</p>
+
 ## Features
 
 - Menu-bar pill that turns into a white capsule with a live clock-face icon while a timer runs
@@ -51,6 +55,7 @@ Covers the GRDB-backed `Storage` (entries, favorites, timer flow, idle/long-run 
 ## Tools
 
 - [tools/seed.sh](tools/seed.sh) — wipes `~/.hoursapp/hoursapp.sqlite` and writes sample data straight into the database. Quit Hoursapp before running.
+- [tools/screenshot.sh](tools/screenshot.sh) — regenerates [docs/screenshot.png](docs/screenshot.png). Builds a Release `.app`, points it at a throwaway `HOURSAPP_DATA_DIR` (your real `~/.hoursapp/` is left alone), seeds the current week with sample entries, auto-opens the popover, and grabs the window via `screencapture`. Quit Hoursapp before running.
 - [tools/generate_icon.swift](tools/generate_icon.swift) — regenerates the app icon PNGs into the asset catalog. Run from the repo root:
 
   ```sh
@@ -61,7 +66,7 @@ Covers the GRDB-backed `Storage` (entries, favorites, timer flow, idle/long-run 
 
 ## Data
 
-All state lives in `~/.hoursapp/`:
+All state lives in `~/.hoursapp/` (override with `HOURSAPP_DATA_DIR` for testing/screenshotting):
 
 | File | Contents |
 | --- | --- |
