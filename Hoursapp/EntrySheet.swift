@@ -297,7 +297,9 @@ private struct PickerField: View {
                 }
                 .labelsHidden()
                 .pickerStyle(.menu)
-                .frame(maxWidth: .infinity)
+                .frame(width: 220, alignment: .leading)
+
+                Spacer(minLength: 0)
 
                 Button {
                     enterAddingMode()
