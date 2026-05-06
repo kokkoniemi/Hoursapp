@@ -242,6 +242,14 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
         }
 
         menu.addItem(.separator())
+        if let action = storage.lastUndoableAction {
+            let undo = NSMenuItem(title: "Undo \(action.userFacingName)",
+                                  action: #selector(performUndo),
+                                  keyEquivalent: "z")
+            undo.target = self
+            menu.addItem(undo)
+        }
+
         let export = NSMenuItem(title: "Export to Excel…", action: #selector(exportToExcel), keyEquivalent: "e")
         export.target = self
         menu.addItem(export)
@@ -282,5 +290,9 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
 
     @objc private func exportToExcel() {
         ExportDialog.present()
+    }
+
+    @objc private func performUndo() {
+        Storage.shared.undoLastAction()
     }
 }

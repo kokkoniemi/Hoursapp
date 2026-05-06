@@ -27,6 +27,15 @@ struct EntrySheet: View {
     @State private var hasManualHoursEdit = false
     @FocusState private var hoursFocused: Bool
 
+    /// Snapshots of the entry's combo as of when the sheet opened, used by
+    /// `save()` to detect "did the user change which combo this entry belongs
+    /// to". Mutable so an inline rename can keep them in sync — otherwise
+    /// renaming the client mid-edit would make `save()` think the combo
+    /// changed and trigger its move-and-merge logic.
+    @State private var originalClient: String?
+    @State private var originalProject: String?
+    @State private var originalTask: String?
+
     private let originalEntry: Entry?
     private let date: String
     private let runningStart: Date?
@@ -49,6 +58,9 @@ struct EntrySheet: View {
             _task = State(initialValue: last?.task ?? "")
             _seconds = State(initialValue: 0)
             _notes = State(initialValue: "")
+            _originalClient = State(initialValue: nil)
+            _originalProject = State(initialValue: nil)
+            _originalTask = State(initialValue: nil)
         case .edit(let entry):
             self.originalEntry = entry
             self.date = entry.date
@@ -78,6 +90,9 @@ struct EntrySheet: View {
             _task = State(initialValue: entry.task)
             _seconds = State(initialValue: initialSeconds)
             _notes = State(initialValue: combinedNotes)
+            _originalClient = State(initialValue: entry.client)
+            _originalProject = State(initialValue: entry.project)
+            _originalTask = State(initialValue: entry.task)
         }
     }
 
@@ -139,9 +154,38 @@ struct EntrySheet: View {
             Divider()
 
             VStack(alignment: .leading, spacing: 10) {
-                PickerField(title: "Client", options: clients, selection: $client)
-                PickerField(title: "Project", options: projects, selection: $project)
-                PickerField(title: "Task", options: tasks, selection: $task)
+                PickerField(
+                    title: "Client",
+                    options: clients,
+                    selection: $client,
+                    onRename: { old, new in
+                        guard storage.renameClient(from: old, to: new) else { return false }
+                        if originalClient == old { originalClient = new }
+                        return true
+                    }
+                )
+                PickerField(
+                    title: "Project",
+                    options: projects,
+                    selection: $project,
+                    onRename: { old, new in
+                        guard !trimmedClient.isEmpty else { return false }
+                        guard storage.renameProject(client: trimmedClient, from: old, to: new) else { return false }
+                        if originalProject == old { originalProject = new }
+                        return true
+                    }
+                )
+                PickerField(
+                    title: "Task",
+                    options: tasks,
+                    selection: $task,
+                    onRename: { old, new in
+                        guard !trimmedClient.isEmpty else { return false }
+                        guard storage.renameTask(client: trimmedClient, from: old, to: new) else { return false }
+                        if originalTask == old { originalTask = new }
+                        return true
+                    }
+                )
                 HoursField(seconds: $seconds, isFocused: $hoursFocused, onUserEdit: {
                     hasManualHoursEdit = true
                 })
@@ -233,18 +277,23 @@ struct EntrySheet: View {
         storage.addClient(ClientProject(client: trimmedClient, project: trimmedProject))
         storage.addTask(name: trimmedTask, for: trimmedClient)
 
+        // Use the (possibly rename-updated) snapshots for the combo identity,
+        // not the immutable originalEntry, so an inline rename doesn't fool
+        // save() into thinking the user changed which combo this entry
+        // belongs to.
         let isEditingSameCombo = isEditing &&
             originalEntry!.date == date &&
-            originalEntry!.client == trimmedClient &&
-            originalEntry!.project == trimmedProject &&
-            originalEntry!.task == trimmedTask
+            originalClient == trimmedClient &&
+            originalProject == trimmedProject &&
+            originalTask == trimmedTask
 
-        if isEditing, !isEditingSameCombo {
+        if isEditing, !isEditingSameCombo,
+           let oc = originalClient, let op = originalProject, let ot = originalTask {
             let oldGroup = storage.entries.filter {
                 $0.date == originalEntry!.date &&
-                $0.client == originalEntry!.client &&
-                $0.project == originalEntry!.project &&
-                $0.task == originalEntry!.task
+                $0.client == oc &&
+                $0.project == op &&
+                $0.task == ot
             }
             for entry in oldGroup {
                 storage.deleteEntry(id: entry.id)
@@ -326,11 +375,17 @@ private struct PickerField: View {
     let title: String
     let options: [String]
     @Binding var selection: String
+    /// Rename callback. Receives `(oldName, newName)`; returns `false` if the
+    /// rename was rejected (e.g. name conflict) so the field can flag it.
+    var onRename: ((String, String) -> Bool)? = nil
 
-    @State private var isAdding = false
-    @State private var newValue = ""
-    @State private var preAddingSelection = ""
-    @FocusState private var newValueFocused: Bool
+    @State private var mode: Mode = .picking
+    @State private var draft = ""
+    @State private var preEditSelection = ""
+    @State private var renameError = false
+    @FocusState private var inputFocused: Bool
+
+    private enum Mode { case picking, adding, renaming }
 
     var body: some View {
         HStack {
@@ -338,92 +393,160 @@ private struct PickerField: View {
                 .frame(width: 64, alignment: .trailing)
                 .foregroundStyle(.secondary)
 
-            if isAdding {
-                TextField("New \(title.lowercased())", text: $newValue)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(maxWidth: .infinity)
-                    .focused($newValueFocused)
-                    .onChange(of: newValue) { _, value in
-                        // Live-sync to the parent so a Save-button click
-                        // (which on macOS doesn't move focus) still picks up
-                        // whatever has been typed.
-                        selection = value
-                    }
-                    .onSubmit { commitNew() }
-                    .onChange(of: newValueFocused) { _, focused in
-                        if !focused && isAdding { commitNew() }
-                    }
-
-                Button {
-                    cancelNew()
-                } label: {
-                    Image(systemName: "xmark")
-                }
-                .buttonStyle(.borderless)
-                .help("Cancel")
-            } else {
-                Picker("", selection: $selection) {
-                    if selection.isEmpty {
-                        Text("Choose…").tag("")
-                    } else if !options.contains(selection) {
-                        Text(selection).tag(selection)
-                    }
-                    ForEach(options, id: \.self) { option in
-                        Text(option).tag(option)
-                    }
-                }
-                .labelsHidden()
-                .pickerStyle(.menu)
-                .frame(width: 220, alignment: .leading)
-
-                Spacer(minLength: 0)
-
-                Button {
-                    enterAddingMode()
-                } label: {
-                    Image(systemName: "plus")
-                }
-                .buttonStyle(.borderless)
-                .help("Add new \(title.lowercased())")
+            switch mode {
+            case .adding, .renaming:
+                editor
+            case .picking:
+                picker
             }
         }
         .onAppear {
-            if options.isEmpty && selection.isEmpty {
+            if mode == .picking, options.isEmpty, selection.isEmpty {
                 enterAddingMode()
             }
         }
     }
 
+    private var editor: some View {
+        HStack {
+            TextField(mode == .adding ? "New \(title.lowercased())" : "Rename \(title.lowercased())",
+                      text: $draft)
+                .textFieldStyle(.roundedBorder)
+                .frame(maxWidth: .infinity)
+                .focused($inputFocused)
+                .onChange(of: draft) { _, value in
+                    renameError = false
+                    if mode == .adding {
+                        // Live-sync to the parent so a Save-button click
+                        // (which on macOS doesn't move focus) still picks up
+                        // whatever has been typed.
+                        selection = value
+                    }
+                }
+                .onSubmit { commitEditor() }
+                .onChange(of: inputFocused) { _, focused in
+                    if !focused, mode != .picking { commitEditor() }
+                }
+
+            if renameError {
+                Image(systemName: "exclamationmark.circle.fill")
+                    .foregroundStyle(.red)
+                    .help("Name already in use")
+            }
+
+            Button {
+                cancelEditor()
+            } label: {
+                Image(systemName: "xmark")
+            }
+            .buttonStyle(.borderless)
+            .help("Cancel")
+        }
+    }
+
+    private var picker: some View {
+        HStack {
+            Picker("", selection: $selection) {
+                if selection.isEmpty {
+                    Text("Choose…").tag("")
+                } else if !options.contains(selection) {
+                    Text(selection).tag(selection)
+                }
+                ForEach(options, id: \.self) { option in
+                    Text(option).tag(option)
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+            .frame(width: 220, alignment: .leading)
+
+            Spacer(minLength: 0)
+
+            if onRename != nil, !selection.isEmpty {
+                Button {
+                    enterRenamingMode()
+                } label: {
+                    Image(systemName: "pencil")
+                }
+                .buttonStyle(.borderless)
+                .help("Rename \(title.lowercased())")
+            }
+
+            Button {
+                enterAddingMode()
+            } label: {
+                Image(systemName: "plus")
+            }
+            .buttonStyle(.borderless)
+            .help("Add new \(title.lowercased())")
+        }
+    }
+
     private func enterAddingMode() {
-        preAddingSelection = selection
-        newValue = ""
+        preEditSelection = selection
+        draft = ""
         selection = ""
-        isAdding = true
+        renameError = false
+        mode = .adding
+        focusInput()
+    }
+
+    private func enterRenamingMode() {
+        preEditSelection = selection
+        draft = selection
+        renameError = false
+        mode = .renaming
+        focusInput()
+    }
+
+    private func focusInput() {
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 30_000_000)
-            newValueFocused = true
+            inputFocused = true
         }
     }
 
-    private func commitNew() {
-        let trimmed = newValue.trimmingCharacters(in: .whitespaces)
-        if trimmed.isEmpty {
-            // Empty edit → fall back to whatever was selected before adding.
-            selection = preAddingSelection
-        } else {
-            selection = trimmed
+    private func commitEditor() {
+        let trimmed = draft.trimmingCharacters(in: .whitespaces)
+        switch mode {
+        case .adding:
+            if trimmed.isEmpty {
+                selection = preEditSelection
+            } else {
+                selection = trimmed
+            }
+            mode = .picking
+            draft = ""
+        case .renaming:
+            if trimmed.isEmpty || trimmed == preEditSelection {
+                selection = preEditSelection
+                mode = .picking
+                draft = ""
+            } else if let onRename, onRename(preEditSelection, trimmed) {
+                selection = trimmed
+                mode = .picking
+                draft = ""
+            } else {
+                renameError = true
+                // Stay in rename mode so the user can fix the name.
+                Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 30_000_000)
+                    inputFocused = true
+                }
+            }
+        case .picking:
+            break
         }
-        isAdding = false
-        newValue = ""
     }
 
-    private func cancelNew() {
-        // Order matters: clear isAdding first so the trailing focus-loss
-        // event from removing the TextField doesn't fire commitNew over the
+    private func cancelEditor() {
+        // Order matters: clear mode first so the trailing focus-loss event
+        // from removing the TextField doesn't fire commitEditor over the
         // restored selection.
-        isAdding = false
-        selection = preAddingSelection
-        newValue = ""
+        mode = .picking
+        selection = preEditSelection
+        draft = ""
+        renameError = false
     }
 }
 

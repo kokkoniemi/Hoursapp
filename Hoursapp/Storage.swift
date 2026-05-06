@@ -7,10 +7,26 @@ import Observation
 final class Storage {
     static let shared = Storage()
 
+    /// The inverse of the most recent destructive operation. Cleared on any
+    /// other mutation, so ⌘Z always applies to the user's last destructive
+    /// click.
+    enum UndoableAction: Equatable {
+        case deletedEntry(EntryRecord)
+        case discardedIdle(entryId: String, previousStartedAt: String)
+
+        var userFacingName: String {
+            switch self {
+            case .deletedEntry:   return "Delete Entry"
+            case .discardedIdle:  return "Discard Idle Time"
+            }
+        }
+    }
+
     private(set) var clients: [ClientProject] = []
     private(set) var tasks: [TaskType] = []
     private(set) var entries: [Entry] = []
     private(set) var favorites: [Favorite] = []
+    private(set) var lastUndoableAction: UndoableAction?
 
     private let directory: URL?
     private var database: HoursDatabase!
@@ -98,6 +114,7 @@ final class Storage {
     // MARK: - Mutations
 
     func addClient(_ pair: ClientProject) {
+        lastUndoableAction = nil
         let now = DateFormat.timestamp(from: .now)
         do {
             try database.dbQueue.write { db in
@@ -111,6 +128,7 @@ final class Storage {
     }
 
     func addTask(name: String, for client: String) {
+        lastUndoableAction = nil
         let now = DateFormat.timestamp(from: .now)
         do {
             try database.dbQueue.write { db in
@@ -124,6 +142,7 @@ final class Storage {
     }
 
     func addFavorite(_ favorite: Favorite) {
+        lastUndoableAction = nil
         let now = DateFormat.timestamp(from: .now)
         do {
             try database.dbQueue.write { db in
@@ -145,6 +164,7 @@ final class Storage {
     }
 
     func removeFavorite(_ favorite: Favorite) {
+        lastUndoableAction = nil
         do {
             try database.dbQueue.write { db in
                 try db.execute(sql: """
@@ -165,6 +185,7 @@ final class Storage {
     }
 
     func upsertEntry(_ entry: Entry) {
+        lastUndoableAction = nil
         let now = DateFormat.timestamp(from: .now)
         do {
             try database.dbQueue.write { db in
@@ -202,17 +223,24 @@ final class Storage {
     }
 
     func deleteEntry(id: String) {
+        lastUndoableAction = nil
+        var captured: EntryRecord?
         do {
             try database.dbQueue.write { db in
+                captured = try EntryRecord.fetchOne(db, key: id)
                 _ = try EntryRecord.filter(EntryRecord.Columns.id == id).deleteAll(db)
             }
         } catch {
             NSLog("Hoursapp deleteEntry failed: \(error)")
         }
+        if let captured {
+            lastUndoableAction = .deletedEntry(captured)
+        }
         refreshEntries()
     }
 
     func startTimer(client: String, project: String, task: String, on date: String) {
+        lastUndoableAction = nil
         let now = DateFormat.timestamp(from: .now)
         do {
             try database.dbQueue.write { db in
@@ -256,6 +284,7 @@ final class Storage {
     }
 
     func stopTimer() {
+        lastUndoableAction = nil
         let now = DateFormat.timestamp(from: .now)
         do {
             try database.dbQueue.write { db in
@@ -268,13 +297,43 @@ final class Storage {
     }
 
     func discardRunningIdle(seconds: Int) {
+        lastUndoableAction = nil
+        if let captured = discardRunningIdleInternal(seconds: seconds) {
+            lastUndoableAction = .discardedIdle(
+                entryId: captured.id, previousStartedAt: captured.previousStartedAt
+            )
+        }
+        refreshEntries()
+    }
+
+    func stopTimerDiscardingIdle(seconds: Int) {
+        lastUndoableAction = nil
+        _ = discardRunningIdleInternal(seconds: seconds)
+        // stopTimer would clear undo again; calling its body inline keeps it simple.
+        let now = DateFormat.timestamp(from: .now)
+        do {
+            try database.dbQueue.write { db in
+                try Self.stopRunningEntry(in: db, atTimestamp: now)
+            }
+        } catch {
+            NSLog("Hoursapp stopTimerDiscardingIdle failed: \(error)")
+        }
+        refreshEntries()
+    }
+
+    /// Bumps the running entry's `started_at` forward; used by both the
+    /// public undoable variant and `stopTimerDiscardingIdle`. Returns the
+    /// info needed to undo, or nil if no running entry was found.
+    private func discardRunningIdleInternal(seconds: Int) -> (id: String, previousStartedAt: String)? {
         let nowDate = Date.now
         let nowText = DateFormat.timestamp(from: nowDate)
+        var captured: (id: String, previousStartedAt: String)?
         do {
             try database.dbQueue.write { db in
                 guard var running = try Self.fetchRunningEntry(in: db),
                       let started = running.startedAt,
                       let startDate = DateFormat.timestampFormatter.date(from: started) else { return }
+                captured = (running.id, started)
                 let bumped = startDate.addingTimeInterval(TimeInterval(seconds))
                 let safe = min(bumped, nowDate)
                 running.startedAt = DateFormat.timestamp(from: safe)
@@ -284,12 +343,130 @@ final class Storage {
         } catch {
             NSLog("Hoursapp discardRunningIdle failed: \(error)")
         }
-        refreshEntries()
+        return captured
     }
 
-    func stopTimerDiscardingIdle(seconds: Int) {
-        discardRunningIdle(seconds: seconds)
-        stopTimer()
+    /// Renames a client. Returns `true` on success, `false` if the source
+    /// doesn't exist, the new name is empty, or another client already owns
+    /// that name. The rename is by id, so all entries / projects / tasks /
+    /// favorites under this client immediately reflect the new name.
+    @discardableResult
+    func renameClient(from old: String, to new: String) -> Bool {
+        let trimmed = new.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty, trimmed != old else { return false }
+        lastUndoableAction = nil
+        var ok = false
+        do {
+            try database.dbQueue.write { db in
+                guard let source = try ClientRecord
+                        .filter(ClientRecord.Columns.name == old)
+                        .fetchOne(db) else { return }
+                let conflict = try ClientRecord
+                    .filter(ClientRecord.Columns.name == trimmed)
+                    .fetchOne(db)
+                guard conflict == nil else { return }
+                try db.execute(
+                    sql: "UPDATE clients SET name = ?, updated_at = ? WHERE id = ?",
+                    arguments: [trimmed, DateFormat.timestamp(from: .now), source.id!]
+                )
+                ok = true
+            }
+        } catch {
+            NSLog("Hoursapp renameClient failed: \(error)")
+        }
+        refreshAll()
+        return ok
+    }
+
+    @discardableResult
+    func renameProject(client: String, from old: String, to new: String) -> Bool {
+        let trimmed = new.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty, trimmed != old else { return false }
+        lastUndoableAction = nil
+        var ok = false
+        do {
+            try database.dbQueue.write { db in
+                guard let parent = try ClientRecord
+                        .filter(ClientRecord.Columns.name == client)
+                        .fetchOne(db) else { return }
+                guard let source = try ProjectRecord
+                        .filter(ProjectRecord.Columns.clientId == parent.id!)
+                        .filter(ProjectRecord.Columns.name == old)
+                        .fetchOne(db) else { return }
+                let conflict = try ProjectRecord
+                    .filter(ProjectRecord.Columns.clientId == parent.id!)
+                    .filter(ProjectRecord.Columns.name == trimmed)
+                    .fetchOne(db)
+                guard conflict == nil else { return }
+                try db.execute(
+                    sql: "UPDATE projects SET name = ?, updated_at = ? WHERE id = ?",
+                    arguments: [trimmed, DateFormat.timestamp(from: .now), source.id!]
+                )
+                ok = true
+            }
+        } catch {
+            NSLog("Hoursapp renameProject failed: \(error)")
+        }
+        refreshAll()
+        return ok
+    }
+
+    @discardableResult
+    func renameTask(client: String, from old: String, to new: String) -> Bool {
+        let trimmed = new.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty, trimmed != old else { return false }
+        lastUndoableAction = nil
+        var ok = false
+        do {
+            try database.dbQueue.write { db in
+                guard let parent = try ClientRecord
+                        .filter(ClientRecord.Columns.name == client)
+                        .fetchOne(db) else { return }
+                guard let source = try TaskRecord
+                        .filter(TaskRecord.Columns.clientId == parent.id!)
+                        .filter(TaskRecord.Columns.name == old)
+                        .fetchOne(db) else { return }
+                let conflict = try TaskRecord
+                    .filter(TaskRecord.Columns.clientId == parent.id!)
+                    .filter(TaskRecord.Columns.name == trimmed)
+                    .fetchOne(db)
+                guard conflict == nil else { return }
+                try db.execute(
+                    sql: "UPDATE tasks SET name = ?, updated_at = ? WHERE id = ?",
+                    arguments: [trimmed, DateFormat.timestamp(from: .now), source.id!]
+                )
+                ok = true
+            }
+        } catch {
+            NSLog("Hoursapp renameTask failed: \(error)")
+        }
+        refreshAll()
+        return ok
+    }
+
+    func undoLastAction() {
+        guard let action = lastUndoableAction else { return }
+        var succeeded = false
+        do {
+            try database.dbQueue.write { db in
+                switch action {
+                case .deletedEntry(let record):
+                    try record.insert(db)
+                case .discardedIdle(let id, let previousStartedAt):
+                    try db.execute(
+                        sql: "UPDATE entries SET started_at = ?, updated_at = ? WHERE id = ?",
+                        arguments: [previousStartedAt, DateFormat.timestamp(from: .now), id]
+                    )
+                }
+            }
+            succeeded = true
+        } catch {
+            NSLog("Hoursapp undo failed: \(error)")
+        }
+        if succeeded {
+            lastUndoableAction = nil
+        }
+        refreshAll()
     }
 
     // MARK: - Internal DB helpers (called inside a write transaction)

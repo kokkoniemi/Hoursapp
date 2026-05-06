@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @State private var model = DayViewModel(storage: .shared)
     @State private var sheet: EditSheet?
+    private let storage = Storage.shared
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
@@ -16,10 +17,26 @@ struct ContentView: View {
                 FooterView(sheet: $sheet, dayKey: model.dayKey)
             }
             .frame(width: 480, height: 640)
+            .background(undoShortcut)
         }
         .sheet(item: $sheet) { item in
             EntrySheet(sheet: item) { sheet = nil }
         }
+    }
+
+    /// Hidden ⌘Z handler. Lives in the view hierarchy so the popover's window
+    /// receives the shortcut; disabled when nothing is undoable so the
+    /// keystroke falls through to focused text fields (e.g. notes editing).
+    private var undoShortcut: some View {
+        Button("Undo") {
+            storage.undoLastAction()
+        }
+        .keyboardShortcut("z", modifiers: .command)
+        .disabled(storage.lastUndoableAction == nil)
+        .opacity(0)
+        .frame(width: 0, height: 0)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }
 
