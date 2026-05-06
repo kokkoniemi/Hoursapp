@@ -24,10 +24,14 @@ struct EntrySheet: View {
     @State private var seconds: Int
     @State private var notes: String
     @State private var showDeleteConfirm = false
+    @State private var hasManualHoursEdit = false
     @FocusState private var hoursFocused: Bool
 
     private let originalEntry: Entry?
     private let date: String
+    private let runningStart: Date?
+    private let runningBaseSeconds: Int
+    private let runningEntryId: String?
 
     init(sheet: EditSheet, onDismiss: @escaping () -> Void) {
         self.sheet = sheet
@@ -36,6 +40,9 @@ struct EntrySheet: View {
         case .new(let date):
             self.originalEntry = nil
             self.date = date
+            self.runningStart = nil
+            self.runningBaseSeconds = 0
+            self.runningEntryId = nil
             let last = Storage.shared.mostRecentEntry()
             _client = State(initialValue: last?.client ?? "")
             _project = State(initialValue: last?.project ?? "")
@@ -56,13 +63,25 @@ struct EntrySheet: View {
                 .map(\.notes)
                 .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
                 .joined(separator: "\n")
+            let runningSibling = siblings.first(where: \.isRunning)
+            let startDate = runningSibling?.startedAt
+                .flatMap { DateFormat.timestampFormatter.date(from: $0) }
+            self.runningStart = startDate
+            self.runningBaseSeconds = combinedSeconds
+            self.runningEntryId = runningSibling?.id
+            let initialSeconds: Int = {
+                guard let start = startDate else { return combinedSeconds }
+                return combinedSeconds + max(0, Int(Date.now.timeIntervalSince(start)))
+            }()
             _client = State(initialValue: entry.client)
             _project = State(initialValue: entry.project)
             _task = State(initialValue: entry.task)
-            _seconds = State(initialValue: combinedSeconds)
+            _seconds = State(initialValue: initialSeconds)
             _notes = State(initialValue: combinedNotes)
         }
     }
+
+    private var isRunning: Bool { runningStart != nil }
 
     private var clients: [String] { storage.uniqueClientNames() }
     private var projects: [String] { storage.projects(for: client) }
@@ -94,6 +113,21 @@ struct EntrySheet: View {
     }
 
     var body: some View {
+        Group {
+            if isRunning && !hasManualHoursEdit {
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    content
+                        .onChange(of: context.date) { _, newNow in
+                            tickRunningSeconds(at: newNow)
+                        }
+                }
+            } else {
+                content
+            }
+        }
+    }
+
+    private var content: some View {
         VStack(spacing: 0) {
             HStack {
                 Text(isEditing ? "Edit Entry" : "New Entry")
@@ -108,7 +142,9 @@ struct EntrySheet: View {
                 PickerField(title: "Client", options: clients, selection: $client)
                 PickerField(title: "Project", options: projects, selection: $project)
                 PickerField(title: "Task", options: tasks, selection: $task)
-                HoursField(seconds: $seconds, isFocused: $hoursFocused)
+                HoursField(seconds: $seconds, isFocused: $hoursFocused, onUserEdit: {
+                    hasManualHoursEdit = true
+                })
                 NotesField(text: $notes)
                 FavoriteRow(isOn: favoriteBinding, isEnabled: canSave)
             }
@@ -135,7 +171,7 @@ struct EntrySheet: View {
         }
         .frame(width: 400, height: 380)
         .onAppear {
-            if isEditing || canSave {
+            if (isEditing || canSave) && !isRunning {
                 Task { @MainActor in
                     try? await Task.sleep(nanoseconds: 50_000_000)
                     hoursFocused = true
@@ -157,6 +193,12 @@ struct EntrySheet: View {
             }
             Button("Cancel", role: .cancel) { }
         }
+    }
+
+    private func tickRunningSeconds(at now: Date) {
+        guard let start = runningStart, !hasManualHoursEdit else { return }
+        let live = runningBaseSeconds + max(0, Int(now.timeIntervalSince(start)))
+        if seconds != live { seconds = live }
     }
 
     private func cascadeFromClient(_ newClient: String) {
@@ -228,17 +270,37 @@ struct EntrySheet: View {
                 .joined(separator: "\n")
         }
 
+        let preserveRunning = isRunning && isEditingSameCombo
         let keepId: String = isEditingSameCombo
-            ? originalEntry!.id
+            ? (preserveRunning ? (runningEntryId ?? originalEntry!.id) : originalEntry!.id)
             : (targetSiblings.first?.id ?? UUID().uuidString)
 
         for sibling in targetSiblings where sibling.id != keepId {
             storage.deleteEntry(id: sibling.id)
         }
 
-        let earliestStarted = targetSiblings.compactMap(\.startedAt).min()
-            ?? originalEntry?.startedAt
-        let nowText = DateFormat.timestamp(from: .now)
+        let nowDate = Date.now
+        let nowText = DateFormat.timestamp(from: nowDate)
+
+        let savedSeconds: Int
+        let savedStartedAt: String?
+        let savedStoppedAt: String?
+        if preserveRunning {
+            if hasManualHoursEdit {
+                savedSeconds = finalSeconds
+                savedStartedAt = nowText
+            } else {
+                savedSeconds = runningBaseSeconds
+                savedStartedAt = runningStart.map { DateFormat.timestamp(from: $0) }
+                    ?? originalEntry?.startedAt
+            }
+            savedStoppedAt = nil
+        } else {
+            savedSeconds = finalSeconds
+            savedStartedAt = targetSiblings.compactMap(\.startedAt).min()
+                ?? originalEntry?.startedAt
+            savedStoppedAt = nowText
+        }
 
         storage.upsertEntry(Entry(
             id: keepId,
@@ -246,10 +308,10 @@ struct EntrySheet: View {
             client: trimmedClient,
             project: trimmedProject,
             task: trimmedTask,
-            seconds: finalSeconds,
+            seconds: savedSeconds,
             notes: finalNotes,
-            startedAt: earliestStarted,
-            stoppedAt: nowText
+            startedAt: savedStartedAt,
+            stoppedAt: savedStoppedAt
         ))
         onDismiss()
     }
@@ -346,6 +408,7 @@ private struct PickerField: View {
 private struct HoursField: View {
     @Binding var seconds: Int
     @FocusState.Binding var isFocused: Bool
+    var onUserEdit: () -> Void = {}
 
     @State private var text: String = ""
     @State private var initialized = false
@@ -364,6 +427,13 @@ private struct HoursField: View {
                     guard !initialized else { return }
                     text = format(seconds)
                     initialized = true
+                }
+                .onChange(of: seconds) { _, newSeconds in
+                    if !isFocused { text = format(newSeconds) }
+                }
+                .onChange(of: text) { oldText, newText in
+                    guard isFocused, oldText != newText else { return }
+                    onUserEdit()
                 }
                 .onChange(of: isFocused) { _, nowFocused in
                     if !nowFocused { commit() }
