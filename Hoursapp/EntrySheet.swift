@@ -428,9 +428,18 @@ private struct PickerField: View {
 }
 
 enum HoursInput {
+    /// Parses a duration string into seconds. Accepted forms:
+    ///   - Empty                       → 0
+    ///   - `1:30`                      → h:mm (minutes 0–59)
+    ///   - `1.5`                       → bare decimal hours
+    ///   - `1h`, `5m`, `300min`, …     → unit-suffixed value
+    ///   - `1h 5m`, `1h5m`, `1.5h 30m` → multiple unit-suffixed values, summed
+    /// Units are case-insensitive: `h`/`hr`/`hrs`/`hour`/`hours` for hours,
+    /// `m`/`min`/`mins`/`minute`/`minutes` for minutes. Negatives are rejected.
     static func parse(_ s: String) -> Int? {
         let trimmed = s.trimmingCharacters(in: .whitespaces)
         if trimmed.isEmpty { return 0 }
+
         if trimmed.contains(":") {
             let parts = trimmed.split(separator: ":")
             guard parts.count == 2,
@@ -438,10 +447,51 @@ enum HoursInput {
                   let m = Int(parts[1]), m >= 0, m < 60 else { return nil }
             return h * 3600 + m * 60
         }
+
         if let f = Double(trimmed), f >= 0 {
             return Int((f * 3600).rounded())
         }
-        return nil
+
+        return parseUnits(trimmed.lowercased())
+    }
+
+    private static func parseUnits(_ s: String) -> Int? {
+        let chars = Array(s)
+        var i = 0
+        var totalSeconds = 0.0
+        var sawAnyToken = false
+
+        while i < chars.count {
+            while i < chars.count, chars[i].isWhitespace { i += 1 }
+            guard i < chars.count else { break }
+
+            let numStart = i
+            while i < chars.count, chars[i].isNumber || chars[i] == "." {
+                i += 1
+            }
+            guard numStart < i, let value = Double(String(chars[numStart..<i])), value >= 0 else {
+                return nil
+            }
+
+            while i < chars.count, chars[i].isWhitespace { i += 1 }
+
+            let unitStart = i
+            while i < chars.count, chars[i].isLetter { i += 1 }
+            let unit = String(chars[unitStart..<i])
+
+            let factor: Double
+            switch unit {
+            case "h", "hr", "hrs", "hour", "hours":   factor = 3600
+            case "m", "min", "mins", "minute", "minutes": factor = 60
+            default: return nil  // bare number was handled in `parse`; mixed tokens require units
+            }
+
+            totalSeconds += value * factor
+            sawAnyToken = true
+        }
+
+        guard sawAnyToken else { return nil }
+        return Int(totalSeconds.rounded())
     }
 }
 
