@@ -1,6 +1,6 @@
 # Hoursapp
 
-A minimal macOS menu-bar time tracker. Lives entirely in your menu bar, stores everything as plain CSV files in `~/.hoursapp/`, no accounts or cloud.
+A minimal macOS menu-bar time tracker. Lives entirely in your menu bar, stores everything in a local SQLite database under `~/.hoursapp/`, no accounts or cloud.
 
 ## Features
 
@@ -12,7 +12,7 @@ A minimal macOS menu-bar time tracker. Lives entirely in your menu bar, stores e
 - Long-run warning: nudges you if a timer has been on for unusually long
 - Right-click the menu-bar icon for a quick-add menu (today's entries, favorites, stop, quit)
 - Launch at login (toggle in Settings)
-- CSV-only storage at `~/.hoursapp/{clients,tasks,entries,favorites}.csv` — easy to back up, version, or edit by hand
+- SQLite storage at `~/.hoursapp/hoursapp.sqlite` with foreign keys, audit timestamps, and per-client task scoping. First launch on this version migrates any pre-existing CSV data and archives the originals under `legacy-csv-backup/` (deleted on the following clean launch).
 
 ## Requirements
 
@@ -45,11 +45,11 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
   -project Hoursapp.xcodeproj -scheme Hoursapp test
 ```
 
-Covers CSV round-tripping and `Storage` (entries, favorites, bootstrap, idempotent inserts).
+Covers CSV parsing, the GRDB-backed `Storage` (entries, favorites, timer flow, idle/long-run engines), the SQLite schema/FK invariants, and the one-time CSV→SQLite importer.
 
 ## Tools
 
-- [tools/seed.sh](tools/seed.sh) — wipes `~/.hoursapp/` and writes sample clients/projects/tasks/entries for visual testing.
+- [tools/seed.sh](tools/seed.sh) — wipes `~/.hoursapp/` and writes sample CSVs that the app imports on next launch.
 - [tools/generate_icon.swift](tools/generate_icon.swift) — regenerates the app icon PNGs into the asset catalog. Run from the repo root:
 
   ```sh
@@ -64,9 +64,19 @@ All state lives in `~/.hoursapp/`:
 
 | File | Contents |
 | --- | --- |
-| `clients.csv` | `client,project` pairs |
-| `tasks.csv` | task names |
-| `entries.csv` | `id,date,client,project,task,seconds,notes,started_at,stopped_at` |
-| `favorites.csv` | `client,project,task` |
+| `hoursapp.sqlite` | Single SQLite database. Tables: `clients`, `projects` (FK→clients), `tasks` (FK→clients, unique per client), `entries` (FK→clients/projects/tasks, with composite FK ensuring tasks stay client-scoped), `favorites`. Each row carries `created_at` / `updated_at` timestamps. WAL mode is enabled (`-wal` / `-shm` sidecar files). |
+| `.migrated` | Marker written after the one-time CSV import; lists the row counts that were imported. |
+| `legacy-csv-backup/` | Created if the importer ran. Holds the original CSVs for one launch, then gets deleted. |
 
-A running entry is one with an empty `stopped_at`. Writes are debounced (500 ms); the app flushes pending writes before quitting.
+A running entry is the row with `stopped_at IS NULL`. A partial unique index (`idx_entries_only_one_running`) enforces that at most one row may be running at a time. Writes are synchronous local SQLite transactions — no debounce, no `flushPendingWrites` needed.
+
+You can poke at the data directly:
+
+```sh
+sqlite3 ~/.hoursapp/hoursapp.sqlite \
+  "SELECT date, c.name, p.name, t.name, seconds FROM entries e
+     JOIN clients c ON c.id = e.client_id
+     JOIN projects p ON p.id = e.project_id
+     JOIN tasks t ON t.id = e.task_id
+   ORDER BY date DESC LIMIT 20;"
+```

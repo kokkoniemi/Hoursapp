@@ -21,7 +21,7 @@ struct StorageTimerTests {
         #expect(running.seconds == 0)
         #expect(running.isRunning)
         #expect(storage.clients.contains(ClientProject(client: "Acme", project: "Site")))
-        #expect(storage.tasks.contains(TaskType(name: "Design")))
+        #expect(storage.tasks.contains(TaskType(client: "Acme", name: "Design")))
     }
 
     @Test("startTimer reuses an existing same-day combo entry")
@@ -54,7 +54,8 @@ struct StorageTimerTests {
         let day = TestSupport.day(.now)
         storage.upsertEntry(TestSupport.entry(
             id: "first", date: day, client: "A", project: "P", task: "T",
-            startedAt: Date.now.addingTimeInterval(-30)
+            startedAt: Date.now.addingTimeInterval(-30),
+            stoppedAt: nil
         ))
 
         storage.startTimer(client: "B", project: "Q", task: "U", on: day)
@@ -77,7 +78,8 @@ struct StorageTimerTests {
         let day = TestSupport.day(.now)
         storage.upsertEntry(TestSupport.entry(
             id: "r", date: day, seconds: 100,
-            startedAt: Date.now.addingTimeInterval(-90)
+            startedAt: Date.now.addingTimeInterval(-90),
+            stoppedAt: nil
         ))
 
         storage.stopTimer()
@@ -116,7 +118,7 @@ struct StorageTimerTests {
         )
         let running = TestSupport.entry(
             id: "r", date: TestSupport.day(now), seconds: 50,
-            startedAt: runningStart
+            startedAt: runningStart, stoppedAt: nil
         )
 
         #expect(storage.displayedSeconds(for: stopped, at: now) == 500)
@@ -142,7 +144,8 @@ struct StorageTimerTests {
         ))
         storage.upsertEntry(TestSupport.entry(
             id: "t2", date: today, seconds: 0,
-            startedAt: now.addingTimeInterval(-300)
+            startedAt: now.addingTimeInterval(-300),
+            stoppedAt: nil
         ))
 
         let total = storage.todayTotalSeconds(at: now)
@@ -157,7 +160,7 @@ struct StorageTimerTests {
         let day = TestSupport.day(.now)
         let originalStart = Date.now.addingTimeInterval(-600)
         storage.upsertEntry(TestSupport.entry(
-            id: "r", date: day, seconds: 0, startedAt: originalStart
+            id: "r", date: day, seconds: 0, startedAt: originalStart, stoppedAt: nil
         ))
 
         storage.discardRunningIdle(seconds: 200)
@@ -179,7 +182,8 @@ struct StorageTimerTests {
         let day = TestSupport.day(.now)
         storage.upsertEntry(TestSupport.entry(
             id: "r", date: day, seconds: 100,
-            startedAt: Date.now.addingTimeInterval(-300)
+            startedAt: Date.now.addingTimeInterval(-300),
+            stoppedAt: nil
         ))
 
         storage.stopTimerDiscardingIdle(seconds: 200)
@@ -243,9 +247,10 @@ struct StorageTimerTests {
         let (storage, dir) = try TestSupport.makeStorage()
         defer { TestSupport.cleanup(dir) }
 
-        storage.addTask(TaskType(name: "Zeta"))
-        storage.addTask(TaskType(name: "Alpha"))
-        #expect(storage.taskNames() == ["Alpha", "Zeta"])
+        storage.addClient(ClientProject(client: "Acme", project: "Site"))
+        storage.addTask(name: "Zeta", for: "Acme")
+        storage.addTask(name: "Alpha", for: "Acme")
+        #expect(storage.taskNames(for: "Acme") == ["Alpha", "Zeta"])
     }
 
     @Test("entries(on:) filters by date string")
@@ -264,8 +269,9 @@ struct StorageTimerTests {
         let (storage, dir) = try TestSupport.makeStorage()
         defer { TestSupport.cleanup(dir) }
 
+        storage.addClient(ClientProject(client: "Acme", project: "Site"))
         for i in 0..<5 {
-            storage.addTask(TaskType(name: "T\(i)"))
+            storage.addTask(name: "T\(i)", for: "Acme")
         }
         await storage.flushPendingWrites()
 

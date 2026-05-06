@@ -12,23 +12,20 @@ struct StorageTests {
         return url
     }
 
-    @Test("bootstrap creates directory and empty CSV files with headers")
-    func bootstrapCreatesFiles() throws {
+    @Test("bootstrap creates the SQLite database with empty tables")
+    func bootstrapCreatesDB() throws {
         let dir = Self.tempDir()
         defer { try? FileManager.default.removeItem(at: dir) }
 
         let storage = Storage(directory: dir)
         try storage.bootstrap()
 
-        for name in ["clients.csv", "tasks.csv", "entries.csv"] {
-            let url = dir.appending(path: name)
-            #expect(FileManager.default.fileExists(atPath: url.path))
-            let text = try String(contentsOf: url, encoding: .utf8)
-            #expect(!text.isEmpty)
-        }
+        let dbURL = dir.appending(path: "hoursapp.sqlite")
+        #expect(FileManager.default.fileExists(atPath: dbURL.path))
         #expect(storage.clients.isEmpty)
         #expect(storage.tasks.isEmpty)
         #expect(storage.entries.isEmpty)
+        #expect(storage.favorites.isEmpty)
     }
 
     @Test("upserted data round-trips through bootstrap")
@@ -40,7 +37,7 @@ struct StorageTests {
             let storage = Storage(directory: dir)
             try storage.bootstrap()
             storage.addClient(ClientProject(client: "Acme", project: "Site"))
-            storage.addTask(TaskType(name: "Design"))
+            storage.addTask(name: "Design", for: "Acme")
             storage.upsertEntry(Entry(
                 id: "abc",
                 date: "2026-05-05",
@@ -58,7 +55,7 @@ struct StorageTests {
         let reopened = Storage(directory: dir)
         try reopened.bootstrap()
         #expect(reopened.clients == [ClientProject(client: "Acme", project: "Site")])
-        #expect(reopened.tasks == [TaskType(name: "Design")])
+        #expect(reopened.tasks == [TaskType(client: "Acme", name: "Design")])
         #expect(reopened.entries.count == 1)
         let e = try #require(reopened.entries.first)
         #expect(e.id == "abc")
@@ -103,8 +100,8 @@ struct StorageTests {
         try? storage.bootstrap()
         storage.addClient(ClientProject(client: "Acme", project: "Site"))
         storage.addClient(ClientProject(client: "Acme", project: "Site"))
-        storage.addTask(TaskType(name: "Design"))
-        storage.addTask(TaskType(name: "Design"))
+        storage.addTask(name: "Design", for: "Acme")
+        storage.addTask(name: "Design", for: "Acme")
         #expect(storage.clients.count == 1)
         #expect(storage.tasks.count == 1)
     }

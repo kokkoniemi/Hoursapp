@@ -12,6 +12,10 @@ settings:
     CODE_SIGN_IDENTITY: "-"
     CODE_SIGN_STYLE: Automatic
     ENABLE_HARDENED_RUNTIME: YES
+packages:
+  GRDB:
+    url: https://github.com/groue/GRDB.swift
+    from: 6.29.0
 targets:
   Hoursapp:
     type: application
@@ -20,6 +24,9 @@ targets:
       - path: Hoursapp
     resources:
       - path: Hoursapp/Assets.xcassets
+    dependencies:
+      - package: GRDB
+        product: GRDB
     info:
       path: Hoursapp/Info.plist
       properties:
@@ -52,6 +59,8 @@ targets:
       - path: HoursappTests
     dependencies:
       - target: Hoursapp
+      - package: GRDB
+        product: GRDB
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mikko.hoursapp.tests

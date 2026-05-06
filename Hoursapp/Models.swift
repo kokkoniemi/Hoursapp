@@ -6,6 +6,7 @@ struct ClientProject: Hashable, Sendable {
 }
 
 struct TaskType: Hashable, Sendable {
+    var client: String
     var name: String
 }
 

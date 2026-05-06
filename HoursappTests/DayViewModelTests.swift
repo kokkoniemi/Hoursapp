@@ -73,7 +73,7 @@ struct DayViewModelTests {
         let key = vm.dayKey
         let runningStart = Date.now.addingTimeInterval(-180)
         storage.upsertEntry(TestSupport.entry(
-            id: "r", date: key, seconds: 0, startedAt: runningStart
+            id: "r", date: key, seconds: 0, startedAt: runningStart, stoppedAt: nil
         ))
 
         let today = try #require(vm.weekDays.first(where: { $0.isSelected }))
@@ -122,7 +122,7 @@ struct DayViewModelTests {
         storage.upsertEntry(TestSupport.entry(id: "stopped", date: key, seconds: 200,
                                               stoppedAt: Date.now.addingTimeInterval(-1)))
         storage.upsertEntry(TestSupport.entry(id: "running", date: key, seconds: 0,
-                                              startedAt: runningStart))
+                                              startedAt: runningStart, stoppedAt: nil))
 
         let group = try #require(vm.groupedEntries.first)
         #expect(group.hasRunningEntry)
@@ -141,7 +141,8 @@ struct DayViewModelTests {
         storage.upsertEntry(TestSupport.entry(id: "real", date: "2026-01-02", seconds: 30,
                                               stoppedAt: Date.now.addingTimeInterval(-1)))
         storage.upsertEntry(TestSupport.entry(id: "running", date: "2026-01-03", seconds: 0,
-                                              startedAt: Date.now.addingTimeInterval(-10)))
+                                              startedAt: Date.now.addingTimeInterval(-10),
+                                              stoppedAt: nil))
 
         let days = vm.daysWithEntries
         #expect(!days.contains("2026-01-01"))

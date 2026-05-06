@@ -85,7 +85,7 @@ struct EntrySheet: View {
 
     private var clients: [String] { storage.uniqueClientNames() }
     private var projects: [String] { storage.projects(for: client) }
-    private var tasks: [String] { storage.taskNames() }
+    private var tasks: [String] { storage.taskNames(for: trimmedClient) }
 
     private var trimmedClient: String { client.trimmingCharacters(in: .whitespaces) }
     private var trimmedProject: String { project.trimmingCharacters(in: .whitespaces) }
@@ -204,20 +204,25 @@ struct EntrySheet: View {
     private func cascadeFromClient(_ newClient: String) {
         guard !newClient.isEmpty else { return }
         let projectsForClient = storage.projects(for: newClient)
-        if !projectsForClient.contains(project) {
-            if let recent = storage.mostRecentEntry(client: newClient) {
-                project = recent.project
-                task = recent.task
-            } else {
-                project = projectsForClient.first ?? ""
-                task = ""
-            }
+        let tasksForClient = storage.taskNames(for: newClient)
+
+        let projectStillValid = projectsForClient.contains(project)
+        let taskStillValid = tasksForClient.contains(task)
+
+        guard !projectStillValid || !taskStillValid else { return }
+
+        if let recent = storage.mostRecentEntry(client: newClient) {
+            project = recent.project
+            task = recent.task
+        } else {
+            project = projectsForClient.first ?? ""
+            task = ""
         }
     }
 
     private func cascadeFromProject(_ newProject: String) {
         guard !newProject.isEmpty, !client.isEmpty else { return }
-        if task.isEmpty || !storage.taskNames().contains(task) {
+        if task.isEmpty || !storage.taskNames(for: client).contains(task) {
             if let recent = storage.mostRecentEntry(client: client, project: newProject) {
                 task = recent.task
             }
@@ -226,7 +231,7 @@ struct EntrySheet: View {
 
     private func save() {
         storage.addClient(ClientProject(client: trimmedClient, project: trimmedProject))
-        storage.addTask(TaskType(name: trimmedTask))
+        storage.addTask(name: trimmedTask, for: trimmedClient)
 
         let isEditingSameCombo = isEditing &&
             originalEntry!.date == date &&

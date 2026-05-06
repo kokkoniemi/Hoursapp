@@ -29,6 +29,9 @@ enum TestSupport {
         DateFormat.day(from: date)
     }
 
+    /// Builds a stopped Entry by default. Tests that want a *running* entry
+    /// must pass `stoppedAt: nil` explicitly — the schema's partial unique
+    /// index allows at most one row with `stopped_at IS NULL`.
     static func entry(
         id: String = UUID().uuidString,
         date: String,
@@ -38,7 +41,7 @@ enum TestSupport {
         seconds: Int = 0,
         notes: String = "",
         startedAt: Date? = nil,
-        stoppedAt: Date? = nil
+        stoppedAt: Date? = .now
     ) -> Entry {
         Entry(
             id: id,

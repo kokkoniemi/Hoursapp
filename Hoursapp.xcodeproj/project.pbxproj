@@ -16,14 +16,19 @@
 		33B5A21D9E223A1C341EBCB9 /* LongRunDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5680C4E0E4202428788A718B /* LongRunDetector.swift */; };
 		38025F5FC36DE36AEDC4AF5A /* StorageTimerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A57C68494BF91EF495295754 /* StorageTimerTests.swift */; };
 		4086E91D4343AB7AF0C165CC /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 325415D88E4E142B396BAC3C /* AppDelegate.swift */; };
+		44285143C91C50F9BC52BBCC /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 6F490FAD032D025AE9300D50 /* GRDB */; };
+		48AF3619957891599F537139 /* Migrations.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7BB88516389BC53819188C4 /* Migrations.swift */; };
 		4A1C085D7628A8B37CD12C4E /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 914725E067D738B9A189BAF9 /* Models.swift */; };
 		5882160E582579CE2931F4E7 /* LaunchAtLogin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A0D162DF65F3D7DC3BD1BB4 /* LaunchAtLogin.swift */; };
 		5E4F9CA59E1FB22CF0750077 /* TimeFormatTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951F931C6F92B8C079E4A47C /* TimeFormatTests.swift */; };
+		61C5D6552A77851B0839573B /* HoursDatabaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67193C32403CE0B586366A05 /* HoursDatabaseTests.swift */; };
+		734D07058BE04467FCAB9EC3 /* HoursDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = B326BF736AF66D06AAA18929 /* HoursDatabase.swift */; };
 		8B92ECF8872245F993C2BB8B /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA61E67A38EA599B05924639 /* ContentView.swift */; };
 		90C994774BA0C8826D9023CD /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD7E0C26F2E8E0E320BF7DBE /* SettingsWindowController.swift */; };
 		93B601D9AF9910794970A252 /* TestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9237BB14AA22FFB618311C0C /* TestSupport.swift */; };
 		9A295A83C3BD5222495F55B4 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20DFC7E015F2F76D556536AA /* Theme.swift */; };
 		9FC317AFF84159A753A5E267 /* SleepWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5BABBF77FDF071835F34476 /* SleepWatcher.swift */; };
+		A31CB3B7AA9791F42464B536 /* CSVMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC70422FC9D211EF249D4A93 /* CSVMigration.swift */; };
 		A366D3B0AD82933F60D90019 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2723FE985A198A989329F1EC /* Assets.xcassets */; };
 		C2B6E05463F23F3CD94C41C0 /* DetectorEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 621D7CD39DB6CA6B8CC87503 /* DetectorEngines.swift */; };
 		C7CC5FC96148C585F7004487 /* HoursInputTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E54DAB4982A8053AC9857F5B /* HoursInputTests.swift */; };
@@ -32,8 +37,11 @@
 		C97D37CF16BCA8BB8876174F /* Storage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53A7DE17B05FAC23DD027B01 /* Storage.swift */; };
 		D66A11094CAA5B8A4DFFDC9B /* DayViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87625A2F0AC365503C88560B /* DayViewModelTests.swift */; };
 		D93332AB86CBE960FEA22CA9 /* CSVTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8ECDD404C01103BBF46A1AE /* CSVTests.swift */; };
+		D9D092F811CAE2F31A466264 /* Records.swift in Sources */ = {isa = PBXBuildFile; fileRef = 139952800A10A624ED10D3A6 /* Records.swift */; };
 		DA9DD3D0F4AF4178696585A1 /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A780A2E2AEFAB77F4703040 /* AppPreferences.swift */; };
 		EFACFD51D6E22BAFAB7C4EBD /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D663E54A0487AAF52CAA4798 /* SettingsView.swift */; };
+		F560073340D1C5B9D1F970C1 /* CSVMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B32FC0A22C4187F67329A5CA /* CSVMigrationTests.swift */; };
+		FDA05055CD42168B218C9266 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 9013E1F1EA3B6E5B072593FB /* GRDB */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -48,6 +56,7 @@
 
 /* Begin PBXFileReference section */
 		0285268E0845ABE709CB5219 /* EntrySheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntrySheet.swift; sourceTree = "<group>"; };
+		139952800A10A624ED10D3A6 /* Records.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Records.swift; sourceTree = "<group>"; };
 		1A780A2E2AEFAB77F4703040 /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
 		20DFC7E015F2F76D556536AA /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		219FE6AC1ED5702087A4C454 /* DayViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayViewModel.swift; sourceTree = "<group>"; };
@@ -61,6 +70,7 @@
 		604B30AE4535981EF1467680 /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
 		621D7CD39DB6CA6B8CC87503 /* DetectorEngines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetectorEngines.swift; sourceTree = "<group>"; };
 		65C7C704E808FF15408DE5C7 /* DetectorEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetectorEngineTests.swift; sourceTree = "<group>"; };
+		67193C32403CE0B586366A05 /* HoursDatabaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoursDatabaseTests.swift; sourceTree = "<group>"; };
 		6EE3E96AD447C3F249CBBE7D /* HoursappApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoursappApp.swift; sourceTree = "<group>"; };
 		7E423F04005A83FE96D8F3D2 /* Hoursapp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hoursapp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		87625A2F0AC365503C88560B /* DayViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayViewModelTests.swift; sourceTree = "<group>"; };
@@ -71,6 +81,8 @@
 		951F931C6F92B8C079E4A47C /* TimeFormatTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeFormatTests.swift; sourceTree = "<group>"; };
 		A57C68494BF91EF495295754 /* StorageTimerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageTimerTests.swift; sourceTree = "<group>"; };
 		A93F34B4395079B130275A46 /* StorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageTests.swift; sourceTree = "<group>"; };
+		B326BF736AF66D06AAA18929 /* HoursDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoursDatabase.swift; sourceTree = "<group>"; };
+		B32FC0A22C4187F67329A5CA /* CSVMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVMigrationTests.swift; sourceTree = "<group>"; };
 		C5BABBF77FDF071835F34476 /* SleepWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepWatcher.swift; sourceTree = "<group>"; };
 		D663E54A0487AAF52CAA4798 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		D8CFE355A4CD538A7A547BFC /* HoursappTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HoursappTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -78,9 +90,41 @@
 		DA61E67A38EA599B05924639 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		DD7E0C26F2E8E0E320BF7DBE /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
 		E54DAB4982A8053AC9857F5B /* HoursInputTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoursInputTests.swift; sourceTree = "<group>"; };
+		E7BB88516389BC53819188C4 /* Migrations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Migrations.swift; sourceTree = "<group>"; };
+		FC70422FC9D211EF249D4A93 /* CSVMigration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVMigration.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFrameworksBuildPhase section */
+		4D5E456A7EA29D14B7103ECC /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				44285143C91C50F9BC52BBCC /* GRDB in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F0572CC335C9FAD839A4CE13 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FDA05055CD42168B218C9266 /* GRDB in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
 /* Begin PBXGroup section */
+		32157801854B039860F67AFB /* Database */ = {
+			isa = PBXGroup;
+			children = (
+				FC70422FC9D211EF249D4A93 /* CSVMigration.swift */,
+				B326BF736AF66D06AAA18929 /* HoursDatabase.swift */,
+				E7BB88516389BC53819188C4 /* Migrations.swift */,
+				139952800A10A624ED10D3A6 /* Records.swift */,
+			);
+			path = Database;
+			sourceTree = "<group>";
+		};
 		78307D18A12B940C21F1D511 /* Hoursapp */ = {
 			isa = PBXGroup;
 			children = (
@@ -105,6 +149,7 @@
 				C5BABBF77FDF071835F34476 /* SleepWatcher.swift */,
 				53A7DE17B05FAC23DD027B01 /* Storage.swift */,
 				20DFC7E015F2F76D556536AA /* Theme.swift */,
+				32157801854B039860F67AFB /* Database */,
 			);
 			path = Hoursapp;
 			sourceTree = "<group>";
@@ -130,9 +175,11 @@
 		F2124CE4E4F8281CBDF16E39 /* HoursappTests */ = {
 			isa = PBXGroup;
 			children = (
+				B32FC0A22C4187F67329A5CA /* CSVMigrationTests.swift */,
 				D8ECDD404C01103BBF46A1AE /* CSVTests.swift */,
 				87625A2F0AC365503C88560B /* DayViewModelTests.swift */,
 				65C7C704E808FF15408DE5C7 /* DetectorEngineTests.swift */,
+				67193C32403CE0B586366A05 /* HoursDatabaseTests.swift */,
 				E54DAB4982A8053AC9857F5B /* HoursInputTests.swift */,
 				A93F34B4395079B130275A46 /* StorageTests.swift */,
 				A57C68494BF91EF495295754 /* StorageTimerTests.swift */,
@@ -151,6 +198,7 @@
 			buildPhases = (
 				57F36459508C73C3DCAD5242 /* Sources */,
 				BB846A19E538D3CBBC1DA204 /* Resources */,
+				4D5E456A7EA29D14B7103ECC /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -158,6 +206,7 @@
 			);
 			name = Hoursapp;
 			packageProductDependencies = (
+				6F490FAD032D025AE9300D50 /* GRDB */,
 			);
 			productName = Hoursapp;
 			productReference = 7E423F04005A83FE96D8F3D2 /* Hoursapp.app */;
@@ -168,6 +217,7 @@
 			buildConfigurationList = 9008E544EA9CF4EEFB3FC832 /* Build configuration list for PBXNativeTarget "HoursappTests" */;
 			buildPhases = (
 				96E68D9D4CEC432B4B7F8B78 /* Sources */,
+				F0572CC335C9FAD839A4CE13 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -176,6 +226,7 @@
 			);
 			name = HoursappTests;
 			packageProductDependencies = (
+				9013E1F1EA3B6E5B072593FB /* GRDB */,
 			);
 			productName = HoursappTests;
 			productReference = D8CFE355A4CD538A7A547BFC /* HoursappTests.xctest */;
@@ -209,6 +260,9 @@
 			);
 			mainGroup = C40F3828F22E4B513129FF04;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				DEBA5AA2D9E7CED07974CDFE /* XCRemoteSwiftPackageReference "GRDB.swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = EC7B11E789F69490A96D5E79 /* Products */;
 			projectDirPath = "";
@@ -239,16 +293,20 @@
 				4086E91D4343AB7AF0C165CC /* AppDelegate.swift in Sources */,
 				DA9DD3D0F4AF4178696585A1 /* AppPreferences.swift in Sources */,
 				2839650D95C3C46BC14F7DAF /* CSV.swift in Sources */,
+				A31CB3B7AA9791F42464B536 /* CSVMigration.swift in Sources */,
 				8B92ECF8872245F993C2BB8B /* ContentView.swift in Sources */,
 				083750E2CF7C20A38307952C /* DayViewModel.swift in Sources */,
 				C2B6E05463F23F3CD94C41C0 /* DetectorEngines.swift in Sources */,
 				248F2A8BF50E8876BF987CD4 /* EntrySheet.swift in Sources */,
+				734D07058BE04467FCAB9EC3 /* HoursDatabase.swift in Sources */,
 				C901366E8DCED5540022105C /* HoursappApp.swift in Sources */,
 				0DD66434492EDE731E45B9F7 /* IdleDetector.swift in Sources */,
 				5882160E582579CE2931F4E7 /* LaunchAtLogin.swift in Sources */,
 				33B5A21D9E223A1C341EBCB9 /* LongRunDetector.swift in Sources */,
 				0FC7400029712968F3C501E2 /* MenuBarController.swift in Sources */,
+				48AF3619957891599F537139 /* Migrations.swift in Sources */,
 				4A1C085D7628A8B37CD12C4E /* Models.swift in Sources */,
+				D9D092F811CAE2F31A466264 /* Records.swift in Sources */,
 				EFACFD51D6E22BAFAB7C4EBD /* SettingsView.swift in Sources */,
 				90C994774BA0C8826D9023CD /* SettingsWindowController.swift in Sources */,
 				9FC317AFF84159A753A5E267 /* SleepWatcher.swift in Sources */,
@@ -261,9 +319,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F560073340D1C5B9D1F970C1 /* CSVMigrationTests.swift in Sources */,
 				D93332AB86CBE960FEA22CA9 /* CSVTests.swift in Sources */,
 				D66A11094CAA5B8A4DFFDC9B /* DayViewModelTests.swift in Sources */,
 				07290D1FFFF28F5D9F029391 /* DetectorEngineTests.swift in Sources */,
+				61C5D6552A77851B0839573B /* HoursDatabaseTests.swift in Sources */,
 				C7CC5FC96148C585F7004487 /* HoursInputTests.swift in Sources */,
 				C9593BABA387A1A30399F5EA /* StorageTests.swift in Sources */,
 				38025F5FC36DE36AEDC4AF5A /* StorageTimerTests.swift in Sources */,
@@ -505,6 +565,30 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		DEBA5AA2D9E7CED07974CDFE /* XCRemoteSwiftPackageReference "GRDB.swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/groue/GRDB.swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 6.29.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		6F490FAD032D025AE9300D50 /* GRDB */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DEBA5AA2D9E7CED07974CDFE /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			productName = GRDB;
+		};
+		9013E1F1EA3B6E5B072593FB /* GRDB */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DEBA5AA2D9E7CED07974CDFE /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			productName = GRDB;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 052C15B52058CACB95AA0A61 /* Project object */;
 }
