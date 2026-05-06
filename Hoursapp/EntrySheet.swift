@@ -329,6 +329,7 @@ private struct PickerField: View {
 
     @State private var isAdding = false
     @State private var newValue = ""
+    @State private var preAddingSelection = ""
     @FocusState private var newValueFocused: Bool
 
     var body: some View {
@@ -342,7 +343,16 @@ private struct PickerField: View {
                     .textFieldStyle(.roundedBorder)
                     .frame(maxWidth: .infinity)
                     .focused($newValueFocused)
+                    .onChange(of: newValue) { _, value in
+                        // Live-sync to the parent so a Save-button click
+                        // (which on macOS doesn't move focus) still picks up
+                        // whatever has been typed.
+                        selection = value
+                    }
                     .onSubmit { commitNew() }
+                    .onChange(of: newValueFocused) { _, focused in
+                        if !focused && isAdding { commitNew() }
+                    }
 
                 Button {
                     cancelNew()
@@ -385,8 +395,10 @@ private struct PickerField: View {
     }
 
     private func enterAddingMode() {
-        isAdding = true
+        preAddingSelection = selection
         newValue = ""
+        selection = ""
+        isAdding = true
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 30_000_000)
             newValueFocused = true
@@ -395,17 +407,22 @@ private struct PickerField: View {
 
     private func commitNew() {
         let trimmed = newValue.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else {
-            cancelNew()
-            return
+        if trimmed.isEmpty {
+            // Empty edit → fall back to whatever was selected before adding.
+            selection = preAddingSelection
+        } else {
+            selection = trimmed
         }
-        selection = trimmed
         isAdding = false
         newValue = ""
     }
 
     private func cancelNew() {
+        // Order matters: clear isAdding first so the trailing focus-loss
+        // event from removing the TextField doesn't fire commitNew over the
+        // restored selection.
         isAdding = false
+        selection = preAddingSelection
         newValue = ""
     }
 }
@@ -457,6 +474,12 @@ private struct HoursField: View {
                 .onChange(of: text) { oldText, newText in
                     guard isFocused, oldText != newText else { return }
                     onUserEdit()
+                    // Live-parse so a Save click without blur still gets the
+                    // latest typed value. Invalid partials leave seconds at
+                    // its last valid parse — that's reformatted on blur.
+                    if let parsed = HoursInput.parse(newText) {
+                        seconds = parsed
+                    }
                 }
                 .onChange(of: isFocused) { _, nowFocused in
                     if !nowFocused { commit() }
