@@ -240,12 +240,13 @@ private struct WeekStripView: View {
                     model.select(date: day.date)
                 } label: {
                     DayPill(day: day, now: now)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .frame(maxWidth: .infinity)
             }
         }
-        .padding(.vertical, 10)
     }
 }
 
