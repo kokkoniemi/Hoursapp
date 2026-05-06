@@ -13,7 +13,7 @@ A minimal macOS menu-bar time tracker. Lives entirely in your menu bar, stores e
 - Right-click the menu-bar icon for a quick-add menu (today's entries, favorites, stop, quit)
 - Launch at login (toggle in Settings)
 - Export to Excel (`.xlsx`) — pick a month or "All months", get a workbook with a Summary sheet (totals by client/project/task) plus an Entries sheet. The all-months variant gives one sheet per month + a cross-sheet summary. Available from the right-click menu (`⌘E`).
-- SQLite storage at `~/.hoursapp/hoursapp.sqlite` with foreign keys, audit timestamps, and per-client task scoping. First launch on this version migrates any pre-existing CSV data and archives the originals under `legacy-csv-backup/` (deleted on the following clean launch).
+- SQLite storage at `~/.hoursapp/hoursapp.sqlite` with foreign keys, audit timestamps, and per-client task scoping.
 
 ## Requirements
 
@@ -46,11 +46,11 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
   -project Hoursapp.xcodeproj -scheme Hoursapp test
 ```
 
-Covers CSV parsing, the GRDB-backed `Storage` (entries, favorites, timer flow, idle/long-run engines), the SQLite schema/FK invariants, and the one-time CSV→SQLite importer.
+Covers the GRDB-backed `Storage` (entries, favorites, timer flow, idle/long-run engines), the SQLite schema/FK invariants, the day view-model, the time-formatter and hours-input parser, and the `.xlsx` exporter (workbook serialization, period selection, single-month and all-months layouts).
 
 ## Tools
 
-- [tools/seed.sh](tools/seed.sh) — wipes `~/.hoursapp/` and writes sample CSVs that the app imports on next launch.
+- [tools/seed.sh](tools/seed.sh) — wipes `~/.hoursapp/hoursapp.sqlite` and writes sample data straight into the database. Quit Hoursapp before running.
 - [tools/generate_icon.swift](tools/generate_icon.swift) — regenerates the app icon PNGs into the asset catalog. Run from the repo root:
 
   ```sh
@@ -66,8 +66,6 @@ All state lives in `~/.hoursapp/`:
 | File | Contents |
 | --- | --- |
 | `hoursapp.sqlite` | Single SQLite database. Tables: `clients`, `projects` (FK→clients), `tasks` (FK→clients, unique per client), `entries` (FK→clients/projects/tasks, with composite FK ensuring tasks stay client-scoped), `favorites`. Each row carries `created_at` / `updated_at` timestamps. WAL mode is enabled (`-wal` / `-shm` sidecar files). |
-| `.migrated` | Marker written after the one-time CSV import; lists the row counts that were imported. |
-| `legacy-csv-backup/` | Created if the importer ran. Holds the original CSVs for one launch, then gets deleted. |
 
 A running entry is the row with `stopped_at IS NULL`. A partial unique index (`idx_entries_only_one_running`) enforces that at most one row may be running at a time. Writes are synchronous local SQLite transactions — no debounce, no `flushPendingWrites` needed.
 

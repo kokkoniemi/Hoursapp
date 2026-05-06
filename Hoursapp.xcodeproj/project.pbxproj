@@ -12,7 +12,6 @@
 		0DD66434492EDE731E45B9F7 /* IdleDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F0E09E6EA9D7C31BBA66D3C /* IdleDetector.swift */; };
 		0FC7400029712968F3C501E2 /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 604B30AE4535981EF1467680 /* MenuBarController.swift */; };
 		248F2A8BF50E8876BF987CD4 /* EntrySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0285268E0845ABE709CB5219 /* EntrySheet.swift */; };
-		2839650D95C3C46BC14F7DAF /* CSV.swift in Sources */ = {isa = PBXBuildFile; fileRef = 899365942FEA1EEA7E3920F4 /* CSV.swift */; };
 		30F2E7C9A002F2899F13B3D2 /* XlsxWorkbook.swift in Sources */ = {isa = PBXBuildFile; fileRef = E70A41AEE296188BD7D8797F /* XlsxWorkbook.swift */; };
 		33B5A21D9E223A1C341EBCB9 /* LongRunDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5680C4E0E4202428788A718B /* LongRunDetector.swift */; };
 		345D76F0DDD5EF60F457E170 /* XlsxWorkbookTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45A1DA3BDDAEB03E8F59F9CC /* XlsxWorkbookTests.swift */; };
@@ -33,7 +32,6 @@
 		9A295A83C3BD5222495F55B4 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20DFC7E015F2F76D556536AA /* Theme.swift */; };
 		9AFE7E4BECBEC39C95EDBA3F /* ExportPeriod.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B1F48D48EDEB48E10754CF8 /* ExportPeriod.swift */; };
 		9FC317AFF84159A753A5E267 /* SleepWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5BABBF77FDF071835F34476 /* SleepWatcher.swift */; };
-		A31CB3B7AA9791F42464B536 /* CSVMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC70422FC9D211EF249D4A93 /* CSVMigration.swift */; };
 		A366D3B0AD82933F60D90019 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2723FE985A198A989329F1EC /* Assets.xcassets */; };
 		A44379608BFE456B040B6A64 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = E66F2F0468675A8A4CCA1358 /* ZIPFoundation */; };
 		C2B6E05463F23F3CD94C41C0 /* DetectorEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 621D7CD39DB6CA6B8CC87503 /* DetectorEngines.swift */; };
@@ -42,12 +40,10 @@
 		C9593BABA387A1A30399F5EA /* StorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A93F34B4395079B130275A46 /* StorageTests.swift */; };
 		C97D37CF16BCA8BB8876174F /* Storage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53A7DE17B05FAC23DD027B01 /* Storage.swift */; };
 		D66A11094CAA5B8A4DFFDC9B /* DayViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87625A2F0AC365503C88560B /* DayViewModelTests.swift */; };
-		D93332AB86CBE960FEA22CA9 /* CSVTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8ECDD404C01103BBF46A1AE /* CSVTests.swift */; };
 		D9D092F811CAE2F31A466264 /* Records.swift in Sources */ = {isa = PBXBuildFile; fileRef = 139952800A10A624ED10D3A6 /* Records.swift */; };
 		DA9DD3D0F4AF4178696585A1 /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A780A2E2AEFAB77F4703040 /* AppPreferences.swift */; };
 		EF2D417239FC1EF9BE6C021F /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 93E100FF53184C615DEA7073 /* ZIPFoundation */; };
 		EFACFD51D6E22BAFAB7C4EBD /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D663E54A0487AAF52CAA4798 /* SettingsView.swift */; };
-		F560073340D1C5B9D1F970C1 /* CSVMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B32FC0A22C4187F67329A5CA /* CSVMigrationTests.swift */; };
 		FDA05055CD42168B218C9266 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 9013E1F1EA3B6E5B072593FB /* GRDB */; };
 		FF17F0D936ED2FF99CBCD6CA /* ExcelExporterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FC5BBFD6ACA0753C2A599AB /* ExcelExporterTests.swift */; };
 /* End PBXBuildFile section */
@@ -85,7 +81,6 @@
 		6EE3E96AD447C3F249CBBE7D /* HoursappApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoursappApp.swift; sourceTree = "<group>"; };
 		7E423F04005A83FE96D8F3D2 /* Hoursapp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hoursapp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		87625A2F0AC365503C88560B /* DayViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayViewModelTests.swift; sourceTree = "<group>"; };
-		899365942FEA1EEA7E3920F4 /* CSV.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSV.swift; sourceTree = "<group>"; };
 		8A0D162DF65F3D7DC3BD1BB4 /* LaunchAtLogin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLogin.swift; sourceTree = "<group>"; };
 		914725E067D738B9A189BAF9 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		9237BB14AA22FFB618311C0C /* TestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestSupport.swift; sourceTree = "<group>"; };
@@ -94,18 +89,15 @@
 		A57C68494BF91EF495295754 /* StorageTimerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageTimerTests.swift; sourceTree = "<group>"; };
 		A93F34B4395079B130275A46 /* StorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageTests.swift; sourceTree = "<group>"; };
 		B326BF736AF66D06AAA18929 /* HoursDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoursDatabase.swift; sourceTree = "<group>"; };
-		B32FC0A22C4187F67329A5CA /* CSVMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVMigrationTests.swift; sourceTree = "<group>"; };
 		C5BABBF77FDF071835F34476 /* SleepWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepWatcher.swift; sourceTree = "<group>"; };
 		CAADBEF349FF8C47940238E2 /* ExcelExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExcelExporter.swift; sourceTree = "<group>"; };
 		D663E54A0487AAF52CAA4798 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		D8CFE355A4CD538A7A547BFC /* HoursappTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HoursappTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		D8ECDD404C01103BBF46A1AE /* CSVTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVTests.swift; sourceTree = "<group>"; };
 		DA61E67A38EA599B05924639 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		DD7E0C26F2E8E0E320BF7DBE /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
 		E54DAB4982A8053AC9857F5B /* HoursInputTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoursInputTests.swift; sourceTree = "<group>"; };
 		E70A41AEE296188BD7D8797F /* XlsxWorkbook.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XlsxWorkbook.swift; sourceTree = "<group>"; };
 		E7BB88516389BC53819188C4 /* Migrations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Migrations.swift; sourceTree = "<group>"; };
-		FC70422FC9D211EF249D4A93 /* CSVMigration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVMigration.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -133,7 +125,6 @@
 		32157801854B039860F67AFB /* Database */ = {
 			isa = PBXGroup;
 			children = (
-				FC70422FC9D211EF249D4A93 /* CSVMigration.swift */,
 				B326BF736AF66D06AAA18929 /* HoursDatabase.swift */,
 				E7BB88516389BC53819188C4 /* Migrations.swift */,
 				139952800A10A624ED10D3A6 /* Records.swift */,
@@ -148,7 +139,6 @@
 				1A780A2E2AEFAB77F4703040 /* AppPreferences.swift */,
 				2723FE985A198A989329F1EC /* Assets.xcassets */,
 				DA61E67A38EA599B05924639 /* ContentView.swift */,
-				899365942FEA1EEA7E3920F4 /* CSV.swift */,
 				219FE6AC1ED5702087A4C454 /* DayViewModel.swift */,
 				621D7CD39DB6CA6B8CC87503 /* DetectorEngines.swift */,
 				0285268E0845ABE709CB5219 /* EntrySheet.swift */,
@@ -203,8 +193,6 @@
 		F2124CE4E4F8281CBDF16E39 /* HoursappTests */ = {
 			isa = PBXGroup;
 			children = (
-				B32FC0A22C4187F67329A5CA /* CSVMigrationTests.swift */,
-				D8ECDD404C01103BBF46A1AE /* CSVTests.swift */,
 				87625A2F0AC365503C88560B /* DayViewModelTests.swift */,
 				65C7C704E808FF15408DE5C7 /* DetectorEngineTests.swift */,
 				2FC5BBFD6ACA0753C2A599AB /* ExcelExporterTests.swift */,
@@ -325,8 +313,6 @@
 			files = (
 				4086E91D4343AB7AF0C165CC /* AppDelegate.swift in Sources */,
 				DA9DD3D0F4AF4178696585A1 /* AppPreferences.swift in Sources */,
-				2839650D95C3C46BC14F7DAF /* CSV.swift in Sources */,
-				A31CB3B7AA9791F42464B536 /* CSVMigration.swift in Sources */,
 				8B92ECF8872245F993C2BB8B /* ContentView.swift in Sources */,
 				083750E2CF7C20A38307952C /* DayViewModel.swift in Sources */,
 				C2B6E05463F23F3CD94C41C0 /* DetectorEngines.swift in Sources */,
@@ -356,8 +342,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F560073340D1C5B9D1F970C1 /* CSVMigrationTests.swift in Sources */,
-				D93332AB86CBE960FEA22CA9 /* CSVTests.swift in Sources */,
 				D66A11094CAA5B8A4DFFDC9B /* DayViewModelTests.swift in Sources */,
 				07290D1FFFF28F5D9F029391 /* DetectorEngineTests.swift in Sources */,
 				FF17F0D936ED2FF99CBCD6CA /* ExcelExporterTests.swift in Sources */,

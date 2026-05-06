@@ -31,8 +31,6 @@ final class Storage {
                 preconditionFailure("Storage initialized without directory or database")
             }
             database = try HoursDatabase(directory: directory)
-            _ = try CSVMigration.importIfNeeded(from: directory, into: database)
-            CSVMigration.deleteBackupIfMarkerPresent(in: directory)
         }
         refreshAll()
     }
