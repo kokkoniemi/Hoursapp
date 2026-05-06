@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		07290D1FFFF28F5D9F029391 /* DetectorEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65C7C704E808FF15408DE5C7 /* DetectorEngineTests.swift */; };
 		083750E2CF7C20A38307952C /* DayViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 219FE6AC1ED5702087A4C454 /* DayViewModel.swift */; };
 		0DD66434492EDE731E45B9F7 /* IdleDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F0E09E6EA9D7C31BBA66D3C /* IdleDetector.swift */; };
 		0FC7400029712968F3C501E2 /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 604B30AE4535981EF1467680 /* MenuBarController.swift */; };
@@ -24,6 +25,7 @@
 		9A295A83C3BD5222495F55B4 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20DFC7E015F2F76D556536AA /* Theme.swift */; };
 		9FC317AFF84159A753A5E267 /* SleepWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5BABBF77FDF071835F34476 /* SleepWatcher.swift */; };
 		A366D3B0AD82933F60D90019 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2723FE985A198A989329F1EC /* Assets.xcassets */; };
+		C2B6E05463F23F3CD94C41C0 /* DetectorEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 621D7CD39DB6CA6B8CC87503 /* DetectorEngines.swift */; };
 		C7CC5FC96148C585F7004487 /* HoursInputTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E54DAB4982A8053AC9857F5B /* HoursInputTests.swift */; };
 		C901366E8DCED5540022105C /* HoursappApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EE3E96AD447C3F249CBBE7D /* HoursappApp.swift */; };
 		C9593BABA387A1A30399F5EA /* StorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A93F34B4395079B130275A46 /* StorageTests.swift */; };
@@ -57,6 +59,8 @@
 		5680C4E0E4202428788A718B /* LongRunDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LongRunDetector.swift; sourceTree = "<group>"; };
 		5804DCDC71B500337E741660 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		604B30AE4535981EF1467680 /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
+		621D7CD39DB6CA6B8CC87503 /* DetectorEngines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetectorEngines.swift; sourceTree = "<group>"; };
+		65C7C704E808FF15408DE5C7 /* DetectorEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetectorEngineTests.swift; sourceTree = "<group>"; };
 		6EE3E96AD447C3F249CBBE7D /* HoursappApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoursappApp.swift; sourceTree = "<group>"; };
 		7E423F04005A83FE96D8F3D2 /* Hoursapp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hoursapp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		87625A2F0AC365503C88560B /* DayViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayViewModelTests.swift; sourceTree = "<group>"; };
@@ -86,6 +90,7 @@
 				DA61E67A38EA599B05924639 /* ContentView.swift */,
 				899365942FEA1EEA7E3920F4 /* CSV.swift */,
 				219FE6AC1ED5702087A4C454 /* DayViewModel.swift */,
+				621D7CD39DB6CA6B8CC87503 /* DetectorEngines.swift */,
 				0285268E0845ABE709CB5219 /* EntrySheet.swift */,
 				40AF4B24886816E74D211668 /* Hoursapp.entitlements */,
 				6EE3E96AD447C3F249CBBE7D /* HoursappApp.swift */,
@@ -127,6 +132,7 @@
 			children = (
 				D8ECDD404C01103BBF46A1AE /* CSVTests.swift */,
 				87625A2F0AC365503C88560B /* DayViewModelTests.swift */,
+				65C7C704E808FF15408DE5C7 /* DetectorEngineTests.swift */,
 				E54DAB4982A8053AC9857F5B /* HoursInputTests.swift */,
 				A93F34B4395079B130275A46 /* StorageTests.swift */,
 				A57C68494BF91EF495295754 /* StorageTimerTests.swift */,
@@ -235,6 +241,7 @@
 				2839650D95C3C46BC14F7DAF /* CSV.swift in Sources */,
 				8B92ECF8872245F993C2BB8B /* ContentView.swift in Sources */,
 				083750E2CF7C20A38307952C /* DayViewModel.swift in Sources */,
+				C2B6E05463F23F3CD94C41C0 /* DetectorEngines.swift in Sources */,
 				248F2A8BF50E8876BF987CD4 /* EntrySheet.swift in Sources */,
 				C901366E8DCED5540022105C /* HoursappApp.swift in Sources */,
 				0DD66434492EDE731E45B9F7 /* IdleDetector.swift in Sources */,
@@ -256,6 +263,7 @@
 			files = (
 				D93332AB86CBE960FEA22CA9 /* CSVTests.swift in Sources */,
 				D66A11094CAA5B8A4DFFDC9B /* DayViewModelTests.swift in Sources */,
+				07290D1FFFF28F5D9F029391 /* DetectorEngineTests.swift in Sources */,
 				C7CC5FC96148C585F7004487 /* HoursInputTests.swift in Sources */,
 				C9593BABA387A1A30399F5EA /* StorageTests.swift in Sources */,
 				38025F5FC36DE36AEDC4AF5A /* StorageTimerTests.swift in Sources */,

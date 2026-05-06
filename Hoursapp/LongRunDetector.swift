@@ -23,18 +23,18 @@ final class LongRunDetector {
 
     private func tick() {
         guard !alertOpen else { return }
-        guard UserDefaults.standard.bool(forKey: PrefKey.longRunWarningEnabled) else { return }
-        guard let running = Storage.shared.runningEntry() else {
-            warnedEntryId = nil
-            return
-        }
-        if warnedEntryId == running.id { return }
+        let running = Storage.shared.runningEntry()
+        if running == nil { warnedEntryId = nil }
 
-        let elapsed = Storage.shared.displayedSeconds(for: running)
-        let thresholdHours = max(UserDefaults.standard.integer(forKey: PrefKey.longRunWarningHours), 1)
-        let thresholdSeconds = thresholdHours * 3600
+        let decision = LongRunEngine.decide(
+            enabled: UserDefaults.standard.bool(forKey: PrefKey.longRunWarningEnabled),
+            runningEntryId: running?.id,
+            elapsedSeconds: running.map { Storage.shared.displayedSeconds(for: $0) } ?? 0,
+            thresholdHours: UserDefaults.standard.integer(forKey: PrefKey.longRunWarningHours),
+            warnedEntryId: warnedEntryId
+        )
 
-        if elapsed >= thresholdSeconds {
+        if case .prompt(let elapsed) = decision, let running {
             warnedEntryId = running.id
             promptLongRun(entry: running, elapsedSeconds: elapsed)
         }
