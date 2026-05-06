@@ -14,8 +14,6 @@ if pgrep -x Hoursapp >/dev/null 2>&1; then
 fi
 
 mkdir -p "$DIR"
-rm -f "$DB" "$DB-wal" "$DB-shm" "$DIR/.migrated"
-rm -rf "$DIR/legacy-csv-backup"
 
 TODAY="$(date +%Y-%m-%d)"
 YESTERDAY="$(date -v-1d +%Y-%m-%d)"
