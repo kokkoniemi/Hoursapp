@@ -22,59 +22,117 @@ func renderIcon(pixels: Int) -> Data {
 
     let canvas = NSRect(origin: .zero, size: size)
     let scale = CGFloat(pixels) / 1024.0
-
-    let shapeInset = (1024.0 - 824.0) / 2.0 * scale
-    let shapeRect = canvas.insetBy(dx: shapeInset, dy: shapeInset)
-    let cornerRadius = 185.0 * scale
-    let shape = NSBezierPath(roundedRect: shapeRect, xRadius: cornerRadius, yRadius: cornerRadius)
-
-    NSColor.white.setFill()
-    shape.fill()
-
     let center = NSPoint(x: canvas.midX, y: canvas.midY)
-    let radius = CGFloat(pixels) * 0.32
-    let lineWidth = max(1.0, CGFloat(pixels) * 0.025)
+
+    // ---- Blue rounded rect background ----
+    let outerInset = 70.0 * scale
+    let outerRect = canvas.insetBy(dx: outerInset, dy: outerInset)
+    let outerCorner = 220.0 * scale
+    let outerPath = NSBezierPath(roundedRect: outerRect,
+                                 xRadius: outerCorner, yRadius: outerCorner)
+    NSColor(deviceRed: 0.0, green: 0.48, blue: 1.0, alpha: 1.0).setFill()
+    outerPath.fill()
+
+    // ---- White clock face ----
+    let dialRadius = 380.0 * scale
+    let dialPath = NSBezierPath(ovalIn: NSRect(
+        x: center.x - dialRadius, y: center.y - dialRadius,
+        width: dialRadius * 2, height: dialRadius * 2
+    ))
+    NSColor.white.setFill()
+    dialPath.fill()
+
+    // ---- Tick marks (12 hour, 48 minute) ----
+    let tickOuter = dialRadius
+    let hourLen = dialRadius * 0.10
+    let minuteLen = dialRadius * 0.035
+
+    let hourTicks = NSBezierPath()
+    let minuteTicks = NSBezierPath()
+    for i in 0..<60 {
+        let angle = Double(i) / 60.0 * .pi * 2 - .pi / 2
+        let isHour = (i % 5 == 0)
+        let len = isHour ? hourLen : minuteLen
+        let x0 = center.x + Darwin.cos(angle) * tickOuter
+        let y0 = center.y + Darwin.sin(angle) * tickOuter
+        let x1 = center.x + Darwin.cos(angle) * (tickOuter - len)
+        let y1 = center.y + Darwin.sin(angle) * (tickOuter - len)
+        let path = isHour ? hourTicks : minuteTicks
+        path.move(to: NSPoint(x: x0, y: y0))
+        path.line(to: NSPoint(x: x1, y: y1))
+    }
+    NSColor(white: 0.0, alpha: 0.55).setStroke()
+    minuteTicks.lineWidth = 3 * scale
+    minuteTicks.stroke()
 
     NSColor.black.setStroke()
-    let circle = NSBezierPath(ovalIn: NSRect(
-        x: center.x - radius,
-        y: center.y - radius,
-        width: radius * 2,
-        height: radius * 2
-    ))
-    circle.lineWidth = lineWidth
-    circle.stroke()
+    hourTicks.lineWidth = 9 * scale
+    hourTicks.lineCapStyle = .round
+    hourTicks.stroke()
 
-    let hourLength = radius * 0.55
-    let minuteLength = radius * 0.82
-    let hourLineWidth = lineWidth * 1.6
-    let minuteLineWidth = lineWidth
+    // ---- h / m italic labels at the 9 and 3 positions ----
+    let labelSize = 110.0 * scale
+    let labelFont =
+        NSFontManager.shared.font(withFamily: "Times New Roman", traits: .italicFontMask, weight: 5, size: labelSize)
+        ?? NSFontManager.shared.font(withFamily: "Georgia", traits: .italicFontMask, weight: 5, size: labelSize)
+        ?? NSFont.systemFont(ofSize: labelSize)
+    let labelAttrs: [NSAttributedString.Key: Any] = [
+        .font: labelFont,
+        .foregroundColor: NSColor.black
+    ]
 
-    func drawHand(clockAngle: Double, length: CGFloat, lineWidth: CGFloat) {
-        let radians = .pi / 2 - clockAngle
-        let end = NSPoint(
-            x: center.x + Darwin.cos(radians) * length,
-            y: center.y + Darwin.sin(radians) * length
-        )
+    func drawCentered(_ s: String, at point: NSPoint) {
+        let str = NSAttributedString(string: s, attributes: labelAttrs)
+        let sz = str.size()
+        str.draw(at: NSPoint(x: point.x - sz.width / 2, y: point.y - sz.height / 2))
+    }
+
+    drawCentered("h", at: NSPoint(x: center.x - dialRadius * 0.65, y: center.y))
+    drawCentered("m", at: NSPoint(x: center.x + dialRadius * 0.65, y: center.y))
+
+    // ---- Hands: flat, rounded ends. Hour & minute black, second hand orange. ----
+    func drawHand(clockHours: Double, length: CGFloat, width: CGFloat,
+                  counterLength: CGFloat, color: NSColor) {
+        let radians = .pi / 2 - clockHours * (.pi * 2 / 12)
+        let dx = Darwin.cos(radians)
+        let dy = Darwin.sin(radians)
+        let tip = NSPoint(x: center.x + dx * length, y: center.y + dy * length)
+        let tail = NSPoint(x: center.x - dx * counterLength, y: center.y - dy * counterLength)
+
         let path = NSBezierPath()
-        path.move(to: center)
-        path.line(to: end)
-        path.lineWidth = lineWidth
+        path.move(to: tail)
+        path.line(to: tip)
+        path.lineWidth = width
         path.lineCapStyle = .round
+        color.setStroke()
         path.stroke()
     }
 
-    let hour = 10.0
-    let minute = 9.0
-    let second = 30.0
-    let hourAngle = (hour + minute / 60.0) * (.pi * 2 / 12)
-    let minuteAngle = (minute + second / 60.0) * (.pi * 2 / 60)
+    let displayHour = 10.0
+    let displayMinute = 9.0
+    let hourClock = displayHour + displayMinute / 60.0
+    let minuteClock = displayMinute / 5.0
 
-    drawHand(clockAngle: hourAngle, length: hourLength, lineWidth: hourLineWidth)
-    drawHand(clockAngle: minuteAngle, length: minuteLength, lineWidth: minuteLineWidth)
+    drawHand(clockHours: hourClock,
+             length: dialRadius * 0.50,
+             width: 28 * scale,
+             counterLength: dialRadius * 0.10,
+             color: .black)
+
+    drawHand(clockHours: minuteClock,
+             length: dialRadius * 0.74,
+             width: 22 * scale,
+             counterLength: dialRadius * 0.13,
+             color: .black)
+
+    // ---- Center dot ----
+    let dotRadius = 16 * scale
+    let dotPath = NSBezierPath(ovalIn: NSRect(x: center.x - dotRadius, y: center.y - dotRadius,
+                                              width: dotRadius * 2, height: dotRadius * 2))
+    NSColor.black.setFill()
+    dotPath.fill()
 
     NSGraphicsContext.restoreGraphicsState()
-
     return rep.representation(using: .png, properties: [:])!
 }
 
