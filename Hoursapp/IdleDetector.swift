@@ -25,13 +25,16 @@ final class IdleDetector {
     private func tick() {
         guard !alertOpen else { return }
         guard UserDefaults.standard.bool(forKey: PrefKey.idleDetectionEnabled) else { return }
-        guard Storage.shared.runningEntry() != nil else { return }
+        guard let running = Storage.shared.runningEntry() else { return }
 
         if let last = lastPromptDismissedAt, Date.now.timeIntervalSince(last) < 60 {
             return
         }
 
-        let idleSeconds = CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: .null)
+        let rawIdle = CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: Self.anyInputEventType)
+        let runningElapsed = TimeInterval(Storage.shared.displayedSeconds(for: running))
+        let idleSeconds = min(rawIdle, runningElapsed)
+
         let thresholdMinutes = max(UserDefaults.standard.integer(forKey: PrefKey.idleThresholdMinutes), 1)
         let threshold = TimeInterval(thresholdMinutes * 60)
 
@@ -39,6 +42,8 @@ final class IdleDetector {
             promptIdle(idleSeconds: Int(idleSeconds))
         }
     }
+
+    private static let anyInputEventType = CGEventType(rawValue: ~0)!
 
     private func promptIdle(idleSeconds: Int) {
         alertOpen = true
