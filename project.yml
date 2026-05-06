@@ -16,6 +16,9 @@ packages:
   GRDB:
     url: https://github.com/groue/GRDB.swift
     from: 6.29.0
+  ZIPFoundation:
+    url: https://github.com/weichsel/ZIPFoundation
+    from: 0.9.16
 targets:
   Hoursapp:
     type: application
@@ -27,6 +30,8 @@ targets:
     dependencies:
       - package: GRDB
         product: GRDB
+      - package: ZIPFoundation
+        product: ZIPFoundation
     info:
       path: Hoursapp/Info.plist
       properties:
@@ -61,6 +66,8 @@ targets:
       - target: Hoursapp
       - package: GRDB
         product: GRDB
+      - package: ZIPFoundation
+        product: ZIPFoundation
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mikko.hoursapp.tests

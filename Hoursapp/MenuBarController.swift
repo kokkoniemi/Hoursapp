@@ -242,6 +242,10 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
         }
 
         menu.addItem(.separator())
+        let export = NSMenuItem(title: "Export to Excel…", action: #selector(exportToExcel), keyEquivalent: "e")
+        export.target = self
+        menu.addItem(export)
+
         let quit = NSMenuItem(title: "Quit Hoursapp", action: #selector(quitApp), keyEquivalent: "q")
         quit.target = self
         menu.addItem(quit)
@@ -274,5 +278,9 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
 
     @objc private func stopRunningTimer() {
         Storage.shared.stopTimer()
+    }
+
+    @objc private func exportToExcel() {
+        ExportDialog.present()
     }
 }

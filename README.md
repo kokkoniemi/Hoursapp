@@ -12,6 +12,7 @@ A minimal macOS menu-bar time tracker. Lives entirely in your menu bar, stores e
 - Long-run warning: nudges you if a timer has been on for unusually long
 - Right-click the menu-bar icon for a quick-add menu (today's entries, favorites, stop, quit)
 - Launch at login (toggle in Settings)
+- Export to Excel (`.xlsx`) — pick a month or "All months", get a workbook with a Summary sheet (totals by client/project/task) plus an Entries sheet. The all-months variant gives one sheet per month + a cross-sheet summary. Available from the right-click menu (`⌘E`).
 - SQLite storage at `~/.hoursapp/hoursapp.sqlite` with foreign keys, audit timestamps, and per-client task scoping. First launch on this version migrates any pre-existing CSV data and archives the originals under `legacy-csv-backup/` (deleted on the following clean launch).
 
 ## Requirements
