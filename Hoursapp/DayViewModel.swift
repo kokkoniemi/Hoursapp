@@ -137,6 +137,16 @@ final class DayViewModel {
 
     func goToToday() { selectedDate = calendar.startOfDay(for: .now) }
 
+    var daysWithEntries: Set<String> {
+        var keys: Set<String> = []
+        for entry in storage.entries where entry.seconds > 0 || entry.isRunning {
+            keys.insert(entry.date)
+        }
+        return keys
+    }
+
+    var monthCalendar: Calendar { calendar }
+
     private struct GroupKey: Hashable {
         let client: String
         let project: String
