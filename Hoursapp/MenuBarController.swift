@@ -241,9 +241,18 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
             menu.addItem(NSMenuItem(title: "No favorites yet — add one in the entry sheet", action: nil, keyEquivalent: ""))
         }
 
+        menu.addItem(.separator())
+        let quit = NSMenuItem(title: "Quit Hoursapp", action: #selector(quitApp), keyEquivalent: "q")
+        quit.target = self
+        menu.addItem(quit)
+
         if let button = statusItem.button {
             menu.popUp(positioning: nil, at: NSPoint(x: 0, y: button.bounds.maxY + 5), in: button)
         }
+    }
+
+    @objc private func quitApp() {
+        NSApp.terminate(nil)
     }
 
     private func makeQuickAddItem(for fav: Favorite) -> NSMenuItem {
