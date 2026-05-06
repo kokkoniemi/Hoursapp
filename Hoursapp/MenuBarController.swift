@@ -49,68 +49,137 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
         let storage = Storage.shared
         let total = storage.todayTotalSeconds()
         let isRunning = storage.runningEntry() != nil
-        button.image = Self.makeClockIcon(at: .now, running: isRunning)
-        button.title = " " + TimeFormat.hoursMinutes(total)
+        let timeText = TimeFormat.hoursMinutes(total)
+
+        button.wantsLayer = true
+        button.layer?.backgroundColor = nil
+        button.layer?.cornerRadius = 0
+
+        if isRunning {
+            button.image = Self.makeRunningPill(at: .now, time: timeText)
+            button.imagePosition = .imageOnly
+            button.title = ""
+        } else {
+            button.image = Self.makeClockIcon(at: .now)
+            button.imagePosition = .imageLeading
+            button.title = " " + timeText
+        }
     }
 
-    private static func makeClockIcon(at date: Date, running: Bool) -> NSImage {
-        let size: CGFloat = 22
-        let image = NSImage(size: NSSize(width: size, height: size), flipped: false) { rect in
-            if running {
-                NSColor.controlAccentColor.setFill()
-                NSBezierPath(ovalIn: rect.insetBy(dx: 1, dy: 1)).fill()
-            }
-
+    private static func makeClockIcon(at date: Date) -> NSImage {
+        let width: CGFloat = 15
+        let height: CGFloat = 22
+        let image = NSImage(size: NSSize(width: width, height: height), flipped: false) { rect in
             let center = NSPoint(x: rect.midX, y: rect.midY)
-            let radius: CGFloat = 6.5
-            let foreground: NSColor = running ? .white : .black
-
-            foreground.setStroke()
-            let circle = NSBezierPath(ovalIn: NSRect(
-                x: center.x - radius,
-                y: center.y - radius,
-                width: radius * 2,
-                height: radius * 2
-            ))
-            circle.lineWidth = 1.0
-            circle.stroke()
-
-            let comps = Calendar.current.dateComponents([.hour, .minute, .second], from: date)
-            let realSeconds = Double(comps.second ?? 0)
-            let realMinutes = Double(comps.minute ?? 0)
-            let realHours = Double((comps.hour ?? 0) % 12)
-
-            let clockMinutes: Double
-            let clockHours: Double
-            if running {
-                clockMinutes = realSeconds
-                clockHours = (realMinutes + realSeconds / 60).truncatingRemainder(dividingBy: 12)
-            } else {
-                clockMinutes = realMinutes + realSeconds / 60
-                clockHours = realHours + realMinutes / 60
-            }
-
-            func drawHand(clockAngle: Double, length: CGFloat, lineWidth: CGFloat) {
-                let radians = .pi / 2 - clockAngle
-                let end = NSPoint(
-                    x: center.x + Darwin.cos(radians) * length,
-                    y: center.y + Darwin.sin(radians) * length
-                )
-                let path = NSBezierPath()
-                path.move(to: center)
-                path.line(to: end)
-                path.lineWidth = lineWidth
-                path.lineCapStyle = .round
-                path.stroke()
-            }
-
-            drawHand(clockAngle: clockHours * (.pi * 2 / 12), length: 3.5, lineWidth: 1.6)
-            drawHand(clockAngle: clockMinutes * (.pi * 2 / 60), length: 5.2, lineWidth: 1.0)
-
+            drawClock(at: center, radius: 6.5, lineWidth: 1.0, handStyle: .stopped, date: date, color: .black)
             return true
         }
-        image.isTemplate = !running
+        image.isTemplate = true
         return image
+    }
+
+    private static func makeRunningPill(at date: Date, time: String) -> NSImage {
+        let font = NSFont.menuBarFont(ofSize: 0)
+        let textAttrs: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: NSColor.black
+        ]
+        let timeNS = time as NSString
+        let textSize = timeNS.size(withAttributes: textAttrs)
+
+        let pillHeight: CGFloat = 20
+        let canvasHeight: CGFloat = 22
+        let iconRadius: CGFloat = 6.5
+        let leftInset: CGFloat = 4
+        let iconCenterX = leftInset + iconRadius
+        let iconRight = iconCenterX + iconRadius
+        let iconToTextGap: CGFloat = 6
+        let textRightPadding: CGFloat = 8
+        let textX = iconRight + iconToTextGap
+        let pillWidth = ceil(textX + textSize.width + textRightPadding)
+
+        let image = NSImage(size: NSSize(width: pillWidth, height: canvasHeight), flipped: false) { rect in
+            let pillRect = NSRect(
+                x: 0,
+                y: (rect.height - pillHeight) / 2,
+                width: rect.width,
+                height: pillHeight
+            )
+            let pillPath = NSBezierPath(roundedRect: pillRect, xRadius: pillHeight / 2, yRadius: pillHeight / 2)
+            NSColor.white.setFill()
+            pillPath.fill()
+
+            let center = NSPoint(x: iconCenterX, y: rect.midY)
+            drawClock(at: center, radius: iconRadius, lineWidth: 1.0, handStyle: .running, date: date, color: .black)
+
+            let textOrigin = NSPoint(
+                x: textX,
+                y: (rect.height - textSize.height) / 2
+            )
+            timeNS.draw(at: textOrigin, withAttributes: textAttrs)
+            return true
+        }
+        image.isTemplate = false
+        return image
+    }
+
+    private enum HandStyle { case stopped, running }
+
+    private static func drawClock(
+        at center: NSPoint,
+        radius: CGFloat,
+        lineWidth: CGFloat,
+        handStyle: HandStyle,
+        date: Date,
+        color: NSColor
+    ) {
+        color.setStroke()
+        let circle = NSBezierPath(ovalIn: NSRect(
+            x: center.x - radius,
+            y: center.y - radius,
+            width: radius * 2,
+            height: radius * 2
+        ))
+        circle.lineWidth = lineWidth
+        circle.stroke()
+
+        let comps = Calendar.current.dateComponents([.hour, .minute, .second], from: date)
+        let realSeconds = Double(comps.second ?? 0)
+        let realMinutes = Double(comps.minute ?? 0)
+        let realHours = Double((comps.hour ?? 0) % 12)
+
+        let clockMinutes: Double
+        let clockHours: Double
+        switch handStyle {
+        case .running:
+            clockMinutes = realSeconds
+            clockHours = (realMinutes + realSeconds / 60).truncatingRemainder(dividingBy: 12)
+        case .stopped:
+            clockMinutes = realMinutes + realSeconds / 60
+            clockHours = realHours + realMinutes / 60
+        }
+
+        let hourLength = radius * 0.55
+        let minuteLength = radius * 0.82
+        let hourWidth = max(1.0, lineWidth * 1.6)
+        let minuteWidth = lineWidth
+
+        func drawHand(clockAngle: Double, length: CGFloat, lineWidth: CGFloat) {
+            let radians = .pi / 2 - clockAngle
+            let end = NSPoint(
+                x: center.x + Darwin.cos(radians) * length,
+                y: center.y + Darwin.sin(radians) * length
+            )
+            let path = NSBezierPath()
+            path.move(to: center)
+            path.line(to: end)
+            path.lineWidth = lineWidth
+            path.lineCapStyle = .round
+            path.stroke()
+        }
+
+        drawHand(clockAngle: clockHours * (.pi * 2 / 12), length: hourLength, lineWidth: hourWidth)
+        drawHand(clockAngle: clockMinutes * (.pi * 2 / 60), length: minuteLength, lineWidth: minuteWidth)
     }
 
     @objc private func handleClick(_ sender: Any?) {
