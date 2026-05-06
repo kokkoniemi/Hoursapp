@@ -152,22 +152,22 @@ CREATE TABLE favorites (
 
 BEGIN;
 INSERT INTO clients (id, name, created_at, updated_at) VALUES
-    (1, 'Farringdon Inc',              '$NOW_UTC', '$NOW_UTC'),
-    (2, 'Rotherhithe Design',          '$NOW_UTC', '$NOW_UTC'),
-    (3, 'Spitalfields Communications', '$NOW_UTC', '$NOW_UTC');
+    (1, 'Clerkenwell Studio', '$NOW_UTC', '$NOW_UTC'),
+    (2, 'Bermondsey & Co',    '$NOW_UTC', '$NOW_UTC'),
+    (3, 'Hampstead Media',    '$NOW_UTC', '$NOW_UTC');
 
 INSERT INTO projects (id, client_id, name, created_at, updated_at) VALUES
-    (1, 1, 'New Company Website',       '$NOW_UTC', '$NOW_UTC'),
-    (2, 2, 'Product Launch',            '$NOW_UTC', '$NOW_UTC'),
-    (3, 3, 'Mobile App',                '$NOW_UTC', '$NOW_UTC'),
-    (4, 3, 'Summer Marketing Campaign', '$NOW_UTC', '$NOW_UTC');
+    (1, 1, 'Brand Refresh',    '$NOW_UTC', '$NOW_UTC'),
+    (2, 2, 'Annual Review',    '$NOW_UTC', '$NOW_UTC'),
+    (3, 3, 'iOS Rebuild',      '$NOW_UTC', '$NOW_UTC'),
+    (4, 3, 'Holiday Campaign', '$NOW_UTC', '$NOW_UTC');
 
 INSERT INTO tasks (id, client_id, name, created_at, updated_at) VALUES
-    (1, 1, 'Meetings',           '$NOW_UTC', '$NOW_UTC'),
-    (2, 2, 'Project Management', '$NOW_UTC', '$NOW_UTC'),
-    (3, 3, 'Design',             '$NOW_UTC', '$NOW_UTC'),
-    (4, 3, 'Project Management', '$NOW_UTC', '$NOW_UTC'),
-    (5, 3, 'Meetings',           '$NOW_UTC', '$NOW_UTC');
+    (1, 1, 'Calls',        '$NOW_UTC', '$NOW_UTC'),
+    (2, 2, 'Planning',     '$NOW_UTC', '$NOW_UTC'),
+    (3, 3, 'Mockups',      '$NOW_UTC', '$NOW_UTC'),
+    (4, 3, 'Coordination', '$NOW_UTC', '$NOW_UTC'),
+    (5, 3, 'Reviews',      '$NOW_UTC', '$NOW_UTC');
 
 $ENTRIES_SQL
 
