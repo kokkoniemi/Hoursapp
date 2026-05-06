@@ -17,4 +17,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         SleepWatcher.shared.start()
         LongRunDetector.shared.start()
     }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        Task { @MainActor in
+            await Storage.shared.flushPendingWrites()
+            NSApp.reply(toApplicationShouldTerminate: true)
+        }
+        return .terminateLater
+    }
 }

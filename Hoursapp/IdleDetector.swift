@@ -60,14 +60,17 @@ final class IdleDetector {
         alert.addButton(withTitle: "Discard idle time")
         alert.addButton(withTitle: "Stop timer")
 
+        let promptShownAt = Date.now
         NSApp.activate(ignoringOtherApps: true)
         let response = alert.runModal()
+        let modalDuration = max(0, Int(Date.now.timeIntervalSince(promptShownAt)))
+        let totalIdle = idleSeconds + modalDuration
 
         switch response {
         case .alertSecondButtonReturn:
-            Storage.shared.discardRunningIdle(seconds: idleSeconds)
+            Storage.shared.discardRunningIdle(seconds: totalIdle)
         case .alertThirdButtonReturn:
-            Storage.shared.stopTimerDiscardingIdle(seconds: idleSeconds)
+            Storage.shared.stopTimerDiscardingIdle(seconds: totalIdle)
         default:
             break
         }
