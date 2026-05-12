@@ -1,6 +1,14 @@
 import Foundation
 
 enum ExcelExporter {
+    /// One narrow column on the left and one short row on top of every sheet.
+    /// Column width unit ≈ characters; 1.43 lands at ~10 px in Calibri 11.
+    /// Row height unit is points; 7.5 pt ≈ 10 px at 96 DPI.
+    private static let paddingRows: Int = 1
+    private static let paddingCols: Int = 1
+    private static let paddingRowHeight: Double = 7.5
+    private static let paddingColumnWidth: Double = 1.43
+
     static func export(entries: [Entry], period: ExportPeriod, to url: URL) throws {
         let workbook = buildWorkbook(entries: entries, period: period)
         try workbook.write(to: url)
@@ -20,6 +28,16 @@ enum ExcelExporter {
         return workbook
     }
 
+    /// Inserts a narrow padding column on the left and a short padding row on
+    /// top. All call sites keep using logical (1-based) coordinates — the
+    /// sheet shifts everything at serialize time.
+    private static func applyPadding(_ sheet: XlsxSheet) {
+        sheet.topPadding = paddingRows
+        sheet.leftPadding = paddingCols
+        sheet.paddingRowHeight = paddingRowHeight
+        sheet.paddingColumnWidth = paddingColumnWidth
+    }
+
     // MARK: - Single month
 
     private static func buildMonthlyWorkbook(
@@ -33,6 +51,7 @@ enum ExcelExporter {
         to workbook: XlsxWorkbook, year: Int, month: Int, entries: [Entry]
     ) {
         let sheet = workbook.addSheet(name: "Summary")
+        applyPadding(sheet)
         sheet.showGridLines = false
         configureSummaryColumns(sheet: sheet)
 
@@ -217,6 +236,26 @@ enum ExcelExporter {
         return row
     }
 
+    /// Borders for one calendar cell. Each day is two stacked cells (date
+    /// row + hours row); within a day we leave no border so the pair reads as
+    /// one unit, while vertical lines separate days-of-week and bottom lines
+    /// separate weeks. The top border on the first week and the right border
+    /// on Sundays close the outer frame.
+    private static func calendarBorders(weekIdx: Int, dayIdx: Int, isHoursRow: Bool) -> XlsxBorder {
+        var b = XlsxBorder()
+        b.left = .thin
+        if dayIdx == 6 { b.right = .thin }
+        if !isHoursRow && weekIdx == 0 { b.top = .thin }
+        if isHoursRow { b.bottom = .thin }
+        return b
+    }
+
+    private static func applyBorders(_ base: XlsxStyle, _ border: XlsxBorder) -> XlsxStyle {
+        var s = base
+        s.border = border
+        return s
+    }
+
     private static func writeCalendar(
         sheet: XlsxSheet, startRow: Int, year: Int, month: Int, analytics: ExportAnalytics
     ) -> Int {
@@ -231,51 +270,110 @@ enum ExcelExporter {
         row += 1
 
         let grid = analytics.calendarGrid(year: year, month: month)
-        let dataStart = row
-        for week in grid {
-            // Day number row — small grey label.
-            for (i, cell) in week.enumerated() {
+        // Bake the heatmap colors per-day rather than relying on a
+        // <conditionalFormatting> color-scale. CF only paints the cell whose
+        // value it scales, so a single rule can't paint both the day-number
+        // row and the hours row in matching tones. Computing the gradient
+        // ourselves lets every cell of a given day share one fill.
+        let maxSeconds = grid.flatMap { $0 }.map(\.seconds).max() ?? 0
+
+        for (weekIdx, week) in grid.enumerated() {
+            // Day-number row.
+            for (dayIdx, cell) in week.enumerated() {
+                let topBorder = calendarBorders(weekIdx: weekIdx, dayIdx: dayIdx, isHoursRow: false)
+                let style = calendarDayStyle(
+                    cell: cell, maxSeconds: maxSeconds, border: topBorder, isHoursRow: false
+                )
                 if cell.isInMonth, let day = cell.day {
-                    sheet.setText(row: row, col: i + 1, String(day), style: SummaryStyle.calendarDayLabel)
+                    sheet.setNumber(row: row, col: dayIdx + 1, Double(day), style: style)
                 } else {
-                    sheet.setText(row: row, col: i + 1, "", style: SummaryStyle.calendarOutOfMonth)
+                    sheet.setText(row: row, col: dayIdx + 1, "", style: style)
                 }
             }
             row += 1
 
-            // Hours row.
-            for (i, cell) in week.enumerated() {
-                if cell.isInMonth {
-                    if cell.seconds > 0 {
-                        sheet.setNumber(row: row, col: i + 1,
-                                        secondsAsDays(cell.seconds),
-                                        style: SummaryStyle.calendarHours)
-                    } else {
-                        sheet.setText(row: row, col: i + 1, "", style: SummaryStyle.calendarEmpty)
-                    }
+            // Hours row — shares the fill computed for its day so the two
+            // cells read as one painted block.
+            for (dayIdx, cell) in week.enumerated() {
+                let bottomBorder = calendarBorders(weekIdx: weekIdx, dayIdx: dayIdx, isHoursRow: true)
+                let style = calendarDayStyle(
+                    cell: cell, maxSeconds: maxSeconds, border: bottomBorder, isHoursRow: true
+                )
+                if cell.isInMonth, cell.seconds > 0 {
+                    sheet.setNumber(row: row, col: dayIdx + 1,
+                                    secondsAsDays(cell.seconds), style: style)
                 } else {
-                    sheet.setText(row: row, col: i + 1, "", style: SummaryStyle.calendarOutOfMonth)
+                    sheet.setText(row: row, col: dayIdx + 1, "", style: style)
                 }
             }
             row += 1
-        }
-
-        // 3-color scale across every hours row (non-contiguous range built by
-        // listing each hours-row's span, separated by spaces in the sqref).
-        let hoursRows: [Int] = stride(from: dataStart + 1, to: row, by: 2).map { $0 }
-        if !hoursRows.isEmpty {
-            let ranges = hoursRows.map { r in
-                "\(XlsxRef.columnLetter(1))\(r):\(XlsxRef.columnLetter(7))\(r)"
-            }.joined(separator: " ")
-            sheet.conditionalFormats.append(.colorScale3(
-                range: ranges,
-                low: ReportPalette.heatLow,
-                mid: ReportPalette.heatMid,
-                high: ReportPalette.heatHigh
-            ))
         }
 
         return row
+    }
+
+    /// Computes the visual style for a single calendar cell, baking in the
+    /// gradient fill and a text color that flips to white once the cell
+    /// background is dark enough for black text to fail WCAG contrast.
+    private static func calendarDayStyle(
+        cell: ExportAnalytics.CalendarCell,
+        maxSeconds: Int,
+        border: XlsxBorder,
+        isHoursRow: Bool
+    ) -> XlsxStyle {
+        // Out-of-month: faint gray block, never painted by the heatmap.
+        guard cell.isInMonth else {
+            var s = isHoursRow
+                ? XlsxStyle(fillColor: ReportPalette.outOfMonth)
+                : XlsxStyle(fillColor: ReportPalette.outOfMonth, numberFormat: .integer)
+            s.border = border
+            return s
+        }
+
+        // In-month but zero activity: no fill, normal text colors.
+        guard cell.seconds > 0, maxSeconds > 0 else {
+            var s = isHoursRow
+                ? XlsxStyle()
+                : XlsxStyle(fontColor: ReportPalette.muted, hAlign: .left,
+                            vAlign: .top, numberFormat: .integer)
+            if isHoursRow {
+                s = XlsxStyle()  // truly empty
+            }
+            s.border = border
+            return s
+        }
+
+        let t = Double(cell.seconds) / Double(maxSeconds)
+        let fill = Color.gradient(t: t,
+                                  low: ReportPalette.heatLow,
+                                  mid: ReportPalette.heatMid,
+                                  high: ReportPalette.heatHigh)
+        let textWhite = Color.luminance(fill) < 0.18
+        let lightTextColor = "FFFFFFFF"
+        let dayLabelColor = textWhite ? lightTextColor : ReportPalette.muted
+        let hoursColor    = textWhite ? lightTextColor : "FF000000"
+
+        var s: XlsxStyle
+        if isHoursRow {
+            s = XlsxStyle(
+                bold: true,
+                fontColor: hoursColor,
+                fillColor: fill,
+                hAlign: .right,
+                vAlign: .top,
+                numberFormat: .hoursMinutes
+            )
+        } else {
+            s = XlsxStyle(
+                fontColor: dayLabelColor,
+                fillColor: fill,
+                hAlign: .left,
+                vAlign: .top,
+                numberFormat: .integer
+            )
+        }
+        s.border = border
+        return s
     }
 
     private static func writeDayOfWeek(
@@ -316,6 +414,54 @@ enum ExcelExporter {
         Double(seconds) / 86_400.0
     }
 
+    /// ARGB color math for the calendar heatmap. Kept private to the exporter
+    /// because the colors here are display values baked into specific cells —
+    /// not a general-purpose color type.
+    enum Color {
+        /// Three-stop gradient: `t` 0 → low, 0.5 → mid, 1 → high.
+        static func gradient(t: Double, low: String, mid: String, high: String) -> String {
+            let clamped = min(1, max(0, t))
+            if clamped < 0.5 {
+                return interpolate(from: low, to: mid, t: clamped * 2)
+            } else {
+                return interpolate(from: mid, to: high, t: (clamped - 0.5) * 2)
+            }
+        }
+
+        /// Linear interpolation in sRGB space. Good enough for a heatmap where
+        /// we just need a perceptually monotonic ramp.
+        static func interpolate(from: String, to: String, t: Double) -> String {
+            let (rA, gA, bA) = rgb(from)
+            let (rB, gB, bB) = rgb(to)
+            let r = Int((Double(rA) + (Double(rB) - Double(rA)) * t).rounded())
+            let g = Int((Double(gA) + (Double(gB) - Double(gA)) * t).rounded())
+            let b = Int((Double(bA) + (Double(bB) - Double(bA)) * t).rounded())
+            return String(format: "FF%02X%02X%02X", r, g, b)
+        }
+
+        /// WCAG relative luminance, returned in [0, 1]. Below ~0.18 dark text
+        /// fails AA against the color; we flip to white at that threshold.
+        static func luminance(_ argb: String) -> Double {
+            let (r, g, b) = rgb(argb)
+            func channel(_ v: Int) -> Double {
+                let c = Double(v) / 255.0
+                return c <= 0.03928 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4)
+            }
+            return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
+        }
+
+        private static func rgb(_ argb: String) -> (Int, Int, Int) {
+            // Accept "FFRRGGBB" or "RRGGBB"; ignore the alpha channel.
+            let hex = argb.count == 8 ? String(argb.dropFirst(2)) : argb
+            guard hex.count == 6 else { return (0, 0, 0) }
+            let chars = Array(hex)
+            let r = Int(String(chars[0..<2]), radix: 16) ?? 0
+            let g = Int(String(chars[2..<4]), radix: 16) ?? 0
+            let b = Int(String(chars[4..<6]), radix: 16) ?? 0
+            return (r, g, b)
+        }
+    }
+
     private static func withFill(_ base: XlsxStyle, fill: String?) -> XlsxStyle {
         guard let fill else { return base }
         var s = base
@@ -327,44 +473,234 @@ enum ExcelExporter {
 
     private static func buildAllMonthsWorkbook(_ workbook: XlsxWorkbook, entries: [Entry]) {
         let summary = workbook.addSheet(name: "Summary")
-        summary.setColumnWidth(col: 1, width: 14)
-        summary.setColumnWidth(col: 2, width: 10)
-        summary.setColumnWidth(col: 3, width: 10)
-        summary.setColumnWidth(col: 4, width: 12)
+        applyPadding(summary)
+        summary.showGridLines = false
 
-        for (i, h) in ["Month", "Hours", "Entries", "Days worked"].enumerated() {
-            summary.setText(row: 1, col: i + 1, h, style: .bold)
+        let analytics = AllTimeAnalytics(entries: entries)
+        let months = analytics.months
+
+        configureAllMonthsColumns(sheet: summary, monthCount: months.count)
+
+        var row = 1
+        row = writeAllTimeHero(sheet: summary, startRow: row, analytics: analytics)
+        row += 1
+
+        guard !entries.isEmpty else {
+            summary.setText(row: row, col: 1, "(no stopped entries)", style: .default)
+            return
         }
 
-        let buckets = bucketByMonth(entries).sorted { $0.key < $1.key }
-        var row = 2
-        for (key, monthEntries) in buckets {
-            let sheetName = key
-            let monthSheet = workbook.addSheet(name: sheetName)
-            addEntriesSheetBody(to: monthSheet, entries: monthEntries)
+        row = writeMonthlyTrend(sheet: summary, startRow: row, analytics: analytics)
+        row += 1
+        _ = writeClientMonthHeatmap(sheet: summary, startRow: row, analytics: analytics)
 
-            summary.setText(row: row, col: 1, sheetName)
-            // Hours live in column F of each per-month entries sheet (Date | Weekday |
-            // Client | Project | Task | Hours | Notes).
-            summary.setFormula(row: row, col: 2, "SUM('\(sheetName)'!F:F)", style: .decimal2)
-            summary.setNumber(row: row, col: 3, Double(monthEntries.count), style: .default)
-            summary.setNumber(row: row, col: 4,
-                              Double(Set(monthEntries.map(\.date)).count), style: .default)
+        // Per-month entries sheets get the polished body so the rest of the
+        // workbook is consistent with the single-month export.
+        for monthKey in months {
+            let monthSheet = workbook.addSheet(name: monthKey)
+            applyPadding(monthSheet)
+            let monthEntries = entries.filter { $0.date.hasPrefix(monthKey) }
+            addEntriesSheetBody(to: monthSheet, entries: monthEntries)
+        }
+    }
+
+    private static func configureAllMonthsColumns(sheet: XlsxSheet, monthCount: Int) {
+        // Client column wider, month columns compact so a long history still
+        // fits horizontally with the sparkline at the end.
+        sheet.setColumnWidth(col: 1, width: 22)
+        let monthColWidth: Double = 9
+        for i in 0..<monthCount {
+            sheet.setColumnWidth(col: 2 + i, width: monthColWidth)
+        }
+        sheet.setColumnWidth(col: 2 + monthCount, width: 11)   // Total
+        sheet.setColumnWidth(col: 3 + monthCount, width: 18)   // Trend sparkline
+    }
+
+    private static func writeAllTimeHero(
+        sheet: XlsxSheet, startRow: Int, analytics: AllTimeAnalytics
+    ) -> Int {
+        sheet.setText(row: startRow, col: 1, "ALL-TIME SUMMARY", style: SummaryStyle.heroTitle)
+
+        let statsRow = startRow + 2
+        writeStat(sheet: sheet, row: statsRow, col: 1,
+                  label: "Total",
+                  valueDays: secondsAsDays(analytics.totalSeconds),
+                  isTime: true)
+        writeStat(sheet: sheet, row: statsRow, col: 3,
+                  label: "Span",
+                  text: analytics.spanLabel ?? "—")
+        writeStat(sheet: sheet, row: statsRow, col: 5,
+                  label: "Clients · Projects",
+                  text: "\(analytics.distinctClients) · \(analytics.distinctProjects)")
+        if let busiest = analytics.busiestMonth {
+            let label = "\(monthLabelShort(busiest.month)) · \(TimeFormat.hoursMinutes(busiest.seconds))"
+            writeStat(sheet: sheet, row: statsRow, col: 7, label: "Busiest month", text: label)
+        }
+
+        let secondRow = statsRow + 1
+        writeStat(sheet: sheet, row: secondRow, col: 1,
+                  label: "Longest streak",
+                  number: Double(analytics.longestStreak))
+        writeStat(sheet: sheet, row: secondRow, col: 3,
+                  label: "Active days",
+                  number: Double(analytics.activeDays))
+        writeStat(sheet: sheet, row: secondRow, col: 5,
+                  label: "Tasks",
+                  number: Double(analytics.distinctTasks))
+
+        return secondRow
+    }
+
+    private static func writeMonthlyTrend(
+        sheet: XlsxSheet, startRow: Int, analytics: AllTimeAnalytics
+    ) -> Int {
+        var row = startRow
+        sheet.setText(row: row, col: 1, "Monthly trend", style: SummaryStyle.sectionTitle)
+        row += 1
+
+        sheet.setText(row: row, col: 1, "Month", style: SummaryStyle.tableHeader)
+        sheet.setText(row: row, col: 2, "Hours", style: SummaryStyle.tableHeaderRight)
+        sheet.setText(row: row, col: 3, "Active days", style: SummaryStyle.tableHeaderRight)
+        sheet.setText(row: row, col: 4, "Avg / day", style: SummaryStyle.tableHeaderRight)
+        row += 1
+
+        let firstDataRow = row
+        for (idx, month) in analytics.byMonth.enumerated() {
+            let banded = (idx % 2 == 1)
+            let fill: String? = banded ? ReportPalette.band : nil
+            sheet.setText(row: row, col: 1, month.month,
+                          style: withFill(SummaryStyle.cellText, fill: fill))
+            // Live cross-sheet sum so editing an entry on a month sheet
+            // reflows the trend table automatically.
+            sheet.setFormula(row: row, col: 2,
+                             "SUM('\(month.month)'!F:F)",
+                             style: withFill(SummaryStyle.cellHours, fill: fill))
+            sheet.setNumber(row: row, col: 3, Double(month.activeDays),
+                            style: withFill(SummaryStyle.cellNumber, fill: fill))
+            let avgDays = month.activeDays > 0
+                ? Double(month.seconds) / Double(month.activeDays) / 86_400.0
+                : 0
+            sheet.setNumber(row: row, col: 4, avgDays,
+                            style: withFill(SummaryStyle.cellHours, fill: fill))
             row += 1
         }
 
-        if buckets.isEmpty {
-            summary.setText(row: 2, col: 1, "(no stopped entries)", style: .default)
-        } else {
-            summary.setText(row: row, col: 1, "Total", style: .bold)
-            summary.setFormula(row: row, col: 2, "SUM(B2:B\(row - 1))", style: .boldDecimal2)
+        let lastDataRow = row - 1
+
+        // Data bar on the Hours column so the trend reads at a glance.
+        if lastDataRow >= firstDataRow {
+            sheet.conditionalFormats.append(.dataBar(
+                range: "B\(firstDataRow):B\(lastDataRow)",
+                color: ReportPalette.dataBar
+            ))
         }
+
+        // Total row.
+        for col in 1...4 {
+            sheet.setText(row: row, col: col, "", style: SummaryStyle.totalFill)
+        }
+        sheet.setText(row: row, col: 1, "Total", style: SummaryStyle.totalLabel)
+        sheet.setFormula(row: row, col: 2,
+                         "SUM(B\(firstDataRow):B\(lastDataRow))",
+                         style: SummaryStyle.totalValueHours)
+        row += 1
+
+        return row
+    }
+
+    private static func writeClientMonthHeatmap(
+        sheet: XlsxSheet, startRow: Int, analytics: AllTimeAnalytics
+    ) -> Int {
+        var row = startRow
+        sheet.setText(row: row, col: 1, "By client across time", style: SummaryStyle.sectionTitle)
+        row += 1
+
+        let months = analytics.months
+        let totalCol = months.count + 2
+        let trendCol = months.count + 3
+
+        sheet.setText(row: row, col: 1, "Client", style: SummaryStyle.tableHeader)
+        for (i, monthKey) in months.enumerated() {
+            sheet.setText(row: row, col: 2 + i,
+                          monthLabelCompact(monthKey),
+                          style: SummaryStyle.tableHeaderCenter)
+        }
+        sheet.setText(row: row, col: totalCol, "Total", style: SummaryStyle.tableHeaderRight)
+        sheet.setText(row: row, col: trendCol, "Trend", style: SummaryStyle.tableHeaderCenter)
+        row += 1
+
+        let matrix = analytics.clientMonthMatrix(months: months)
+        let firstDataRow = row
+
+        for (idx, entry) in matrix.enumerated() {
+            let banded = (idx % 2 == 1)
+            let fill: String? = banded ? ReportPalette.band : nil
+            sheet.setText(row: row, col: 1, entry.client,
+                          style: withFill(SummaryStyle.cellText, fill: fill))
+            for (i, seconds) in entry.perMonth.enumerated() {
+                if seconds > 0 {
+                    sheet.setNumber(row: row, col: 2 + i,
+                                    secondsAsDays(seconds),
+                                    style: withFill(SummaryStyle.cellHours, fill: fill))
+                } else {
+                    // Empty cell still gets the fill so banding remains contiguous.
+                    sheet.setText(row: row, col: 2 + i, "",
+                                  style: withFill(XlsxStyle(), fill: fill))
+                }
+            }
+            let totalSeconds = entry.perMonth.reduce(0, +)
+            sheet.setNumber(row: row, col: totalCol, secondsAsDays(totalSeconds),
+                            style: withFill(SummaryStyle.cellHours, fill: fill))
+            sheet.setText(row: row, col: trendCol, Sparkline.render(entry.perMonth),
+                          style: withFill(SummaryStyle.sparkline, fill: fill))
+            row += 1
+        }
+
+        let lastDataRow = row - 1
+        if lastDataRow >= firstDataRow, !months.isEmpty {
+            // 3-color scale across the per-month matrix only — Total and Trend
+            // columns stay neutral so the colors read as month-to-month variance,
+            // not absolute size.
+            let firstMonthCol = XlsxRef.columnLetter(2)
+            let lastMonthCol = XlsxRef.columnLetter(1 + months.count)
+            sheet.conditionalFormats.append(.colorScale3(
+                range: "\(firstMonthCol)\(firstDataRow):\(lastMonthCol)\(lastDataRow)",
+                low: ReportPalette.heatLow,
+                mid: ReportPalette.heatMid,
+                high: ReportPalette.heatHigh
+            ))
+        }
+
+        return row
+    }
+
+    private static func monthLabelCompact(_ key: String) -> String {
+        // "yyyy-MM" → "MMM yy" e.g. "2026-05" → "May 26".
+        let parts = key.split(separator: "-")
+        guard parts.count == 2,
+              let year = Int(parts[0]),
+              let month = Int(parts[1]),
+              (1...12).contains(month) else { return key }
+        let months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+        return "\(months[month - 1]) \(String(format: "%02d", year % 100))"
+    }
+
+    private static func monthLabelShort(_ key: String) -> String {
+        // "yyyy-MM" → "MMM yyyy" e.g. "May 2026". Used in the hero stats.
+        let parts = key.split(separator: "-")
+        guard parts.count == 2,
+              let year = Int(parts[0]),
+              let month = Int(parts[1]),
+              (1...12).contains(month) else { return key }
+        return ExportPeriod.monthLabel(year: year, month: month)
     }
 
     // MARK: - Per-entry sheets
 
     private static func addEntriesSheet(to workbook: XlsxWorkbook, name: String, entries: [Entry]) {
         let sheet = workbook.addSheet(name: name)
+        applyPadding(sheet)
         addEntriesSheetBody(to: sheet, entries: entries)
     }
 
@@ -456,19 +792,6 @@ enum ExcelExporter {
         return s
     }
 
-    // MARK: - Aggregation helpers
-
-    private static func bucketByMonth(_ entries: [Entry]) -> [String: [Entry]] {
-        var buckets: [String: [Entry]] = [:]
-        for entry in entries {
-            // entry.date is yyyy-MM-dd; the month key is the first 7 chars.
-            guard entry.date.count >= 7 else { continue }
-            let key = String(entry.date.prefix(7))
-            buckets[key, default: []].append(entry)
-        }
-        return buckets
-    }
-
 }
 
 // MARK: - Report palette & styles
@@ -480,9 +803,12 @@ private enum ReportPalette {
     static let totalFill  = "FFE7EEF7"   // Very light blue tint
     static let heroText   = "FF305496"   // Dark accent for the title
     static let dataBar    = "FF638EC6"   // Lighter accent for data bars
+    // Heatmap stops — text color is chosen per cell based on luminance, so
+    // the saturated brand accent can be used at the high end without losing
+    // contrast (we flip to white text on the dark cells).
     static let heatLow    = "FFFFFFFF"   // White → no activity
-    static let heatMid    = "FFB6CDE8"   // Soft blue mid
-    static let heatHigh   = "FF305496"   // Saturated accent for heavy days
+    static let heatMid    = "FFA8C5E8"   // Soft blue mid
+    static let heatHigh   = "FF305496"   // Brand accent — used with white text
     static let muted      = "FF8C8C8C"   // Calendar day number, "out of month" tint
     static let outOfMonth = "FFF0F0F0"   // Faint fill for grid cells outside the month
 }
@@ -611,6 +937,16 @@ private enum SummaryStyle {
     static let cellText = XlsxStyle(vAlign: .center)
     static let cellHours = XlsxStyle(hAlign: .right, vAlign: .center, numberFormat: .hoursMinutes)
     static let cellPercent = XlsxStyle(hAlign: .right, vAlign: .center, numberFormat: .percent)
+    static let cellNumber = XlsxStyle(hAlign: .right, vAlign: .center, numberFormat: .integer)
+
+    /// Unicode block-character sparkline cell — centered, slightly muted, so
+    /// the strip reads as a sketch rather than competing with the numeric
+    /// columns next to it.
+    static let sparkline = XlsxStyle(
+        fontColor: ReportPalette.heatHigh,
+        hAlign: .center,
+        vAlign: .center
+    )
 
     static let totalFill: XlsxStyle = {
         var s = XlsxStyle(fillColor: ReportPalette.totalFill)
@@ -630,8 +966,11 @@ private enum SummaryStyle {
     }()
 
     // Calendar cells.
+    /// Day-of-month label. Stored as an integer with format `0` so Excel
+    /// doesn't tag the cell with a "number stored as text" warning triangle.
     static let calendarDayLabel = XlsxStyle(
-        fontColor: ReportPalette.muted, hAlign: .left, vAlign: .top
+        fontColor: ReportPalette.muted, hAlign: .left, vAlign: .top,
+        numberFormat: .integer
     )
     static let calendarHours = XlsxStyle(
         bold: true, hAlign: .right, vAlign: .top, numberFormat: .hoursMinutes
@@ -766,4 +1105,123 @@ private extension Calendar {
         c.timeZone = TimeZone(identifier: "UTC")!
         return c
     }()
+}
+
+// MARK: - All-time analytics
+
+/// Aggregations spanning every month in the dataset. Used by the All-months
+/// summary; kept separate from `ExportAnalytics` because that one is
+/// month-scoped.
+struct AllTimeAnalytics {
+    let entries: [Entry]
+
+    var totalSeconds: Int { entries.reduce(0) { $0 + $1.seconds } }
+    var activeDays: Int { Set(entries.map(\.date)).count }
+
+    /// Every yyyy-MM key with at least one stopped entry, ascending.
+    var months: [String] {
+        var set = Set<String>()
+        for e in entries where e.date.count >= 7 {
+            set.insert(String(e.date.prefix(7)))
+        }
+        return set.sorted()
+    }
+
+    var distinctClients: Int { Set(entries.map(\.client)).count }
+    var distinctProjects: Int {
+        Set(entries.map { "\($0.client)\u{0}\($0.project)" }).count
+    }
+    var distinctTasks: Int {
+        Set(entries.map { "\($0.client)\u{0}\($0.project)\u{0}\($0.task)" }).count
+    }
+
+    /// Longest run of consecutive calendar days with at least one entry.
+    var longestStreak: Int {
+        let dates = Set(entries.map(\.date)).sorted()
+        guard !dates.isEmpty else { return 0 }
+        let cal = Calendar.gregorianUTC
+        var best = 1
+        var current = 1
+        for i in 1..<dates.count {
+            guard let prev = DateKey.parse(dates[i - 1]),
+                  let cur  = DateKey.parse(dates[i]) else { continue }
+            let diff = cal.dateComponents([.day], from: prev, to: cur).day ?? 0
+            if diff == 1 {
+                current += 1
+                best = max(best, current)
+            } else {
+                current = 1
+            }
+        }
+        return best
+    }
+
+    var spanLabel: String? {
+        let dates = entries.map(\.date)
+        guard let first = dates.min(), let last = dates.max() else { return nil }
+        if first == last { return first }
+        return "\(first) → \(last)"
+    }
+
+    struct MonthSummary { let month: String; let seconds: Int; let activeDays: Int }
+
+    var byMonth: [MonthSummary] {
+        struct Acc { var seconds = 0; var days: Set<String> = [] }
+        var bucket: [String: Acc] = [:]
+        for e in entries where e.date.count >= 7 {
+            let key = String(e.date.prefix(7))
+            bucket[key, default: Acc()].seconds += e.seconds
+            bucket[key, default: Acc()].days.insert(e.date)
+        }
+        return bucket
+            .map { MonthSummary(month: $0.key, seconds: $0.value.seconds, activeDays: $0.value.days.count) }
+            .sorted { $0.month < $1.month }
+    }
+
+    var busiestMonth: MonthSummary? {
+        byMonth.max { $0.seconds < $1.seconds }
+    }
+
+    /// Per-client hours by month. The `perMonth` array is aligned to the
+    /// passed-in `months` list so the heatmap row layout is predictable.
+    /// Sorted by total descending so the heaviest clients sit at the top.
+    func clientMonthMatrix(months: [String]) -> [(client: String, perMonth: [Int])] {
+        var bucket: [String: [String: Int]] = [:]
+        for e in entries where e.date.count >= 7 {
+            let monthKey = String(e.date.prefix(7))
+            bucket[e.client, default: [:]][monthKey, default: 0] += e.seconds
+        }
+        return bucket
+            .map { client, perMonth -> (client: String, perMonth: [Int]) in
+                let values = months.map { perMonth[$0] ?? 0 }
+                return (client: client, perMonth: values)
+            }
+            .sorted { $0.perMonth.reduce(0, +) > $1.perMonth.reduce(0, +) }
+    }
+}
+
+// MARK: - Sparkline
+
+/// Renders a sequence of numeric values as a Unicode block-character strip.
+/// Cheap, font-agnostic, and works in every spreadsheet reader — chosen in
+/// preference to OOXML's native sparkline extension (which is well-supported
+/// in Excel but inconsistent in Numbers and LibreOffice).
+enum Sparkline {
+    private static let blocks = ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"]
+
+    static func render(_ values: [Int]) -> String {
+        guard let maxValue = values.max(), maxValue > 0 else {
+            // No activity at all — emit a row of spaces so column width stays
+            // predictable but the cell reads as visually empty.
+            return String(repeating: " ", count: values.count)
+        }
+        return values.map { value -> String in
+            guard value > 0 else { return " " }
+            // Floor rather than round so the smallest non-zero value maps to
+            // the shortest block (▁) and only the absolute max maps to █.
+            let scaled = Double(value) / Double(maxValue) * Double(blocks.count - 1)
+            let idx = min(blocks.count - 1, max(0, Int(scaled)))
+            return blocks[idx]
+        }.joined()
+    }
 }

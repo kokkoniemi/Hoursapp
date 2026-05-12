@@ -135,15 +135,17 @@ struct ExcelExporterTests {
         #expect(summaryXML.contains("Calendar"))
         #expect(summaryXML.contains("Day of week"))
         // Conditional formatting is emitted for the breakdown data bars.
+        // (The calendar heatmap bakes its colors per-cell instead of using a
+        // CF rule, so we don't assert a color scale on the monthly summary.)
         #expect(summaryXML.contains("type=\"dataBar\""))
-        // And a 3-color scale on the calendar heatmap.
-        #expect(summaryXML.contains("type=\"colorScale\""))
 
         let entriesXML = try Self.read(archive, "xl/worksheets/sheet2.xml")
         #expect(entriesXML.contains("Acme"))
         #expect(!entriesXML.contains("Beta"))    // Beta is in April, excluded
-        // Hours column moved to F after the Weekday column was inserted.
-        #expect(entriesXML.contains("<f>SUM(F2:F4)</f>"))
+        // Hours column lives at logical F (Date | Weekday | Client | Project |
+        // Task | Hours | Notes). Every sheet has one row/col of padding, so
+        // logical F2:F4 emits as G3:G5 on disk.
+        #expect(entriesXML.contains("<f>SUM(G3:G5)</f>"))
     }
 
     @Test("monthly export with no entries only writes the title and a placeholder")
@@ -187,11 +189,20 @@ struct ExcelExporterTests {
         #expect(workbookXML.contains("name=\"2026-05\""))
 
         let summaryXML = try Self.read(archive, "xl/worksheets/sheet1.xml")
-        // Per-month entries sheets now have hours in column F (Date | Weekday |
-        // Client | Project | Task | Hours | Notes).
-        #expect(summaryXML.contains("<f>SUM('2026-04'!F:F)</f>"))
-        #expect(summaryXML.contains("<f>SUM('2026-05'!F:F)</f>"))
-        #expect(summaryXML.contains("<f>SUM(B2:B3)</f>"))
+        // The Monthly trend table cross-links to each month's per-sheet
+        // hours column. With padding everywhere, logical F shifts to G in
+        // both the host sheet and the referenced sheets.
+        #expect(summaryXML.contains("<f>SUM('2026-04'!G:G)</f>"))
+        #expect(summaryXML.contains("<f>SUM('2026-05'!G:G)</f>"))
+        // The All-months summary now has the hero + trend table + per-client
+        // heatmap. We assert section titles rather than fragile cell positions.
+        #expect(summaryXML.contains("ALL-TIME SUMMARY"))
+        #expect(summaryXML.contains("Monthly trend"))
+        #expect(summaryXML.contains("By client across time"))
+        // Per-client heatmap uses a 3-color scale.
+        #expect(summaryXML.contains("type=\"colorScale\""))
+        // Trend column data bar on the monthly hours.
+        #expect(summaryXML.contains("type=\"dataBar\""))
     }
 
     @Test("notes with quotes/commas/newlines round-trip safely")
@@ -216,6 +227,26 @@ struct ExcelExporterTests {
         #expect(entriesXML.contains("&lt;html&gt;"))
         // The literal newline survives inside the XML — preserved by xml:space="preserve".
         #expect(entriesXML.contains("\nnew line"))
+    }
+
+    @Test("sparkline maps values onto block characters")
+    func sparklineRendering() {
+        // All-zero input collapses to spaces so width stays predictable.
+        #expect(Sparkline.render([0, 0, 0]) == "   ")
+        // Empty input renders to empty string.
+        #expect(Sparkline.render([]) == "")
+        // Min/max are scaled to the lowest/highest blocks.
+        let s = Sparkline.render([1, 4, 8])
+        #expect(s.count == 3)
+        // First non-zero value should be the lowest non-space block; last value should be the
+        // highest block.
+        let first = String(s.first!)
+        let last = String(s.last!)
+        #expect(first == "▁")
+        #expect(last == "█")
+        // A zero value mixed with non-zero renders as a space.
+        let mixed = Sparkline.render([0, 5])
+        #expect(mixed.first == " ")
     }
 
     private static func read(_ archive: Archive, _ name: String) throws -> String {

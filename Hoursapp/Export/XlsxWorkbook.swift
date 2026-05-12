@@ -331,7 +331,16 @@ final class XlsxStyleRegistry {
 
     private func borderEdgeXML(name: String, edge: XlsxBorderEdge?) -> String {
         guard let edge else { return "<\(name)/>" }
-        return "<\(name) style=\"\(edge.rawValue)\"><color rgb=\"FF808080\"/></\(name)>"
+        // Lighter weights get lighter colors so a thin border feels like a
+        // hairline (e.g. inside the calendar grid) and reserved-for-emphasis
+        // weights like .medium/.thick stay visually distinct.
+        let color: String
+        switch edge {
+        case .thin:   color = "FFD9D9D9"
+        case .medium: color = "FFA6A6A6"
+        case .thick:  color = "FF595959"
+        }
+        return "<\(name) style=\"\(edge.rawValue)\"><color rgb=\"\(color)\"/></\(name)>"
     }
 }
 
@@ -355,6 +364,9 @@ final class XlsxSheet {
     let sheetId: Int
     private var rows: [Int: [Int: XlsxCell]] = [:]
     private var columnWidths: [Int: Double] = [:]
+    /// Custom heights keyed by logical row (1-based). Padding rows use a
+    /// separate `paddingRowHeight`.
+    private var rowHeights: [Int: Double] = [:]
 
     /// If > 0, this many top rows stay pinned when scrolling.
     var frozenRows: Int = 0
@@ -370,6 +382,19 @@ final class XlsxSheet {
     /// insertion order; each gets a unique priority so Excel evaluates them
     /// deterministically.
     var conditionalFormats: [XlsxConditionalFormat] = []
+
+    /// Empty rows inserted at the top of the sheet for visual padding. All
+    /// logical row indices used by callers are transparently shifted by this
+    /// amount at serialize time. Formula and range references shift too.
+    var topPadding: Int = 0
+    /// Empty columns inserted at the left of the sheet for visual padding.
+    var leftPadding: Int = 0
+    /// Height (points) for each padding row. Optional — default reader height
+    /// is used if unset.
+    var paddingRowHeight: Double? = nil
+    /// Width (units) for each padding column. Optional — default reader width
+    /// is used if unset.
+    var paddingColumnWidth: Double? = nil
 
     init(name: String, sheetId: Int) {
         self.name = name
@@ -396,6 +421,11 @@ final class XlsxSheet {
         columnWidths[col] = width
     }
 
+    /// Sets a custom height (in points) for the given logical row.
+    func setRowHeight(row: Int, height: Double) {
+        rowHeights[row] = height
+    }
+
     private func write(row: Int, col: Int, cell: XlsxCell) {
         precondition(row >= 1 && col >= 1, "row/col are 1-based")
         rows[row, default: [:]][col] = cell
@@ -411,6 +441,9 @@ final class XlsxSheet {
     }
 
     func serialize(registry: XlsxStyleRegistry) -> String {
+        let rd = topPadding
+        let cd = leftPadding
+
         var xml = """
         <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
         <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
@@ -422,8 +455,10 @@ final class XlsxSheet {
             let gridlinesAttr = showGridLines ? "" : " showGridLines=\"0\""
             xml += "<sheetViews><sheetView workbookViewId=\"0\"\(gridlinesAttr)>"
             if frozenRows > 0 || frozenCols > 0 {
-                let xSplit = frozenCols
-                let ySplit = frozenRows
+                // Padding rows/cols are also frozen so they always stay visible
+                // along with the real header.
+                let xSplit = frozenCols + cd
+                let ySplit = frozenRows + rd
                 let topLeft = XlsxRef.cellRef(row: ySplit + 1, col: xSplit + 1)
                 let activePane: String
                 if xSplit > 0 && ySplit > 0 { activePane = "bottomRight" }
@@ -434,40 +469,67 @@ final class XlsxSheet {
             xml += "</sheetView></sheetViews>"
         }
 
-        if !columnWidths.isEmpty {
+        // <cols>: padding columns get their own width; data columns shift by cd.
+        var columnEntries: [(col: Int, width: Double)] = []
+        if let pw = paddingColumnWidth, cd > 0 {
+            for c in 1...cd { columnEntries.append((c, pw)) }
+        }
+        for (col, width) in columnWidths {
+            columnEntries.append((col + cd, width))
+        }
+        if !columnEntries.isEmpty {
             xml += "<cols>"
-            for (col, width) in columnWidths.sorted(by: { $0.key < $1.key }) {
-                xml += "<col min=\"\(col)\" max=\"\(col)\" width=\"\(width)\" customWidth=\"1\"/>"
+            for entry in columnEntries.sorted(by: { $0.col < $1.col }) {
+                xml += "<col min=\"\(entry.col)\" max=\"\(entry.col)\" width=\"\(entry.width)\" customWidth=\"1\"/>"
             }
             xml += "</cols>"
         }
 
         xml += "<sheetData>"
+        // Emit padding rows first so their custom height applies.
+        if let ph = paddingRowHeight, rd > 0 {
+            for r in 1...rd {
+                xml += "<row r=\"\(r)\" ht=\"\(ph)\" customHeight=\"1\"/>"
+            }
+        }
         for rowIndex in rows.keys.sorted() {
             guard let row = rows[rowIndex] else { continue }
-            xml += "<row r=\"\(rowIndex)\">"
+            let displayRow = rowIndex + rd
+            var rowAttrs = "r=\"\(displayRow)\""
+            if let h = rowHeights[rowIndex] {
+                rowAttrs += " ht=\"\(h)\" customHeight=\"1\""
+            }
+            xml += "<row \(rowAttrs)>"
             for colIndex in row.keys.sorted() {
                 guard let cell = row[colIndex] else { continue }
-                xml += serialize(cell: cell, row: rowIndex, col: colIndex, registry: registry)
+                xml += serialize(
+                    cell: cell, row: rowIndex, col: colIndex,
+                    rowDelta: rd, colDelta: cd, registry: registry
+                )
             }
             xml += "</row>"
         }
         xml += "</sheetData>"
 
         if let range = autoFilterRange {
-            xml += "<autoFilter ref=\"\(range)\"/>"
+            let shifted = XlsxRef.shiftRefs(range, rowDelta: rd, colDelta: cd)
+            xml += "<autoFilter ref=\"\(shifted)\"/>"
         }
 
         for (priority, cf) in conditionalFormats.enumerated() {
-            xml += cf.serialize(priority: priority + 1)
+            xml += cf.serialize(priority: priority + 1, rowDelta: rd, colDelta: cd)
         }
 
         xml += "</worksheet>"
         return xml
     }
 
-    private func serialize(cell: XlsxCell, row: Int, col: Int, registry: XlsxStyleRegistry) -> String {
-        let ref = XlsxRef.cellRef(row: row, col: col)
+    private func serialize(
+        cell: XlsxCell, row: Int, col: Int,
+        rowDelta: Int, colDelta: Int,
+        registry: XlsxStyleRegistry
+    ) -> String {
+        let ref = XlsxRef.cellRef(row: row + rowDelta, col: col + colDelta)
         let styleId = registry.intern(cell.style)
         let styleAttr = styleId == 0 ? "" : " s=\"\(styleId)\""
         switch cell.value {
@@ -478,7 +540,8 @@ final class XlsxSheet {
         case .number(let d):
             return "<c r=\"\(ref)\"\(styleAttr)><v>\(XlsxNumber.format(d))</v></c>"
         case .formula(let f):
-            return "<c r=\"\(ref)\"\(styleAttr)><f>\(XML.escapeText(f))</f></c>"
+            let shifted = XlsxRef.shiftRefs(f, rowDelta: rowDelta, colDelta: colDelta)
+            return "<c r=\"\(ref)\"\(styleAttr)><f>\(XML.escapeText(shifted))</f></c>"
         case .date(let d):
             return "<c r=\"\(ref)\"\(styleAttr)><v>\(XlsxNumber.format(d.excelSerial))</v></c>"
         }
@@ -497,15 +560,17 @@ enum XlsxConditionalFormat {
     /// calendar heatmap.
     case colorScale3(range: String, low: String, mid: String, high: String, midPercentile: Int = 50)
 
-    func serialize(priority: Int) -> String {
+    func serialize(priority: Int, rowDelta: Int = 0, colDelta: Int = 0) -> String {
         switch self {
         case .dataBar(let range, let color):
+            let r = XlsxRef.shiftRefs(range, rowDelta: rowDelta, colDelta: colDelta)
             return """
-            <conditionalFormatting sqref="\(range)"><cfRule type="dataBar" priority="\(priority)"><dataBar><cfvo type="min"/><cfvo type="max"/><color rgb="\(color)"/></dataBar></cfRule></conditionalFormatting>
+            <conditionalFormatting sqref="\(r)"><cfRule type="dataBar" priority="\(priority)"><dataBar><cfvo type="min"/><cfvo type="max"/><color rgb="\(color)"/></dataBar></cfRule></conditionalFormatting>
             """
         case .colorScale3(let range, let low, let mid, let high, let midPct):
+            let r = XlsxRef.shiftRefs(range, rowDelta: rowDelta, colDelta: colDelta)
             return """
-            <conditionalFormatting sqref="\(range)"><cfRule type="colorScale" priority="\(priority)"><colorScale><cfvo type="min"/><cfvo type="percentile" val="\(midPct)"/><cfvo type="max"/><color rgb="\(low)"/><color rgb="\(mid)"/><color rgb="\(high)"/></colorScale></cfRule></conditionalFormatting>
+            <conditionalFormatting sqref="\(r)"><cfRule type="colorScale" priority="\(priority)"><colorScale><cfvo type="min"/><cfvo type="percentile" val="\(midPct)"/><cfvo type="max"/><color rgb="\(low)"/><color rgb="\(mid)"/><color rgb="\(high)"/></colorScale></cfRule></conditionalFormatting>
             """
         }
     }
@@ -549,6 +614,92 @@ enum XlsxRef {
             n = (n - 1) / 26
         }
         return letters
+    }
+
+    /// Inverse of `columnLetter`. "A" → 1, "Z" → 26, "AA" → 27.
+    static func columnIndex(_ letters: String) -> Int {
+        var n = 0
+        for ch in letters {
+            guard let v = ch.asciiValue, v >= 65, v <= 90 else { continue }
+            n = n * 26 + Int(v) - 64
+        }
+        return n
+    }
+
+    /// Shifts every A1-style cell reference inside `s` by the given deltas.
+    /// Handles single cells (`B2`), ranges (`B2:G5`), whole columns (`F:F`),
+    /// and sheet-qualified refs (`'2026-04'!F:F`). Skips text inside single
+    /// quotes and skips function names (uppercase letters immediately
+    /// followed by `(`). Does not handle `$`-anchored absolute refs.
+    static func shiftRefs(_ s: String, rowDelta: Int, colDelta: Int) -> String {
+        if rowDelta == 0 && colDelta == 0 { return s }
+        var result = ""
+        var inQuotes = false
+        var i = s.startIndex
+
+        while i < s.endIndex {
+            let ch = s[i]
+
+            if ch == "'" {
+                inQuotes.toggle()
+                result.append(ch)
+                i = s.index(after: i)
+                continue
+            }
+            if inQuotes {
+                result.append(ch)
+                i = s.index(after: i)
+                continue
+            }
+
+            if isUpperLetter(ch) {
+                // Scan run of uppercase letters.
+                var j = i
+                while j < s.endIndex, isUpperLetter(s[j]) {
+                    j = s.index(after: j)
+                }
+                // Function name (followed by `(`) — leave alone.
+                if j < s.endIndex, s[j] == "(" {
+                    result.append(contentsOf: s[i..<j])
+                    i = j
+                    continue
+                }
+                let letters = String(s[i..<j])
+                // Scan optional trailing digits → row number.
+                var k = j
+                while k < s.endIndex, isAsciiDigit(s[k]) {
+                    k = s.index(after: k)
+                }
+                let digits = String(s[j..<k])
+
+                let oldCol = columnIndex(letters)
+                let newCol = max(1, oldCol + colDelta)
+                let newLetters = columnLetter(newCol)
+                let newDigits: String
+                if digits.isEmpty {
+                    newDigits = ""
+                } else {
+                    let oldRow = Int(digits) ?? 1
+                    newDigits = String(max(1, oldRow + rowDelta))
+                }
+                result += newLetters + newDigits
+                i = k
+            } else {
+                result.append(ch)
+                i = s.index(after: i)
+            }
+        }
+        return result
+    }
+
+    private static func isUpperLetter(_ c: Character) -> Bool {
+        guard let v = c.asciiValue else { return false }
+        return v >= 65 && v <= 90
+    }
+
+    private static func isAsciiDigit(_ c: Character) -> Bool {
+        guard let v = c.asciiValue else { return false }
+        return v >= 48 && v <= 57
     }
 }
 

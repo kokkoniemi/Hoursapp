@@ -178,6 +178,44 @@ struct XlsxWorkbookTests {
         #expect(styles.contains("<b/>"))
     }
 
+    @Test("sheet padding shifts cells, formulas, autofilter, freeze, and CF")
+    func sheetPadding() throws {
+        let workbook = XlsxWorkbook()
+        let sheet = workbook.addSheet(name: "Pad")
+        sheet.topPadding = 1
+        sheet.leftPadding = 1
+        sheet.paddingRowHeight = 8
+        sheet.paddingColumnWidth = 1.5
+        sheet.frozenRows = 1
+        sheet.autoFilterRange = "A1:B3"
+        sheet.conditionalFormats.append(.dataBar(range: "B2:B3", color: "FF638EC6"))
+        sheet.setText(row: 1, col: 1, "Header")
+        sheet.setNumber(row: 2, col: 2, 1)
+        sheet.setNumber(row: 3, col: 2, 2)
+        sheet.setFormula(row: 4, col: 2, "SUM(B2:B3)")
+
+        let url = Self.tempURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        try workbook.write(to: url)
+
+        let archive = try #require(Archive(url: url, accessMode: .read))
+        let xml = try Self.readEntry(in: archive, named: "xl/worksheets/sheet1.xml")
+
+        // Cells shifted by one row + one col: A1 → B2, B4 → C5.
+        #expect(xml.contains("r=\"B2\""))
+        #expect(xml.contains("r=\"C5\""))
+        // Formula references shifted too.
+        #expect(xml.contains("<f>SUM(C3:C4)</f>"))
+        // Autofilter and CF ranges shifted.
+        #expect(xml.contains("<autoFilter ref=\"B2:C4\"/>"))
+        #expect(xml.contains("sqref=\"C3:C4\""))
+        // Freeze pane includes the padding row, so ySplit is 2 (1 padding + 1 header).
+        #expect(xml.contains("ySplit=\"2\""))
+        // Padding column width and row height present.
+        #expect(xml.contains("<col min=\"1\" max=\"1\" width=\"1.5\""))
+        #expect(xml.contains("<row r=\"1\" ht=\"8.0\" customHeight=\"1\"/>"))
+    }
+
     @Test("multiple sheets get distinct sheetN.xml entries")
     func multipleSheets() throws {
         let workbook = XlsxWorkbook()
