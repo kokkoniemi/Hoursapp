@@ -26,9 +26,11 @@ struct EntryGroup: Identifiable, Hashable {
     let task: String
     let baseSeconds: Int
     let runningStartedAt: Date?
+    let notes: String
 
     var id: String { "\(client)|\(project)|\(task)" }
     var hasRunningEntry: Bool { runningStartedAt != nil }
+    var hasNotes: Bool { !notes.isEmpty }
 
     func displayedSeconds(at now: Date) -> Int {
         guard let started = runningStartedAt else { return baseSeconds }
@@ -109,12 +111,18 @@ final class DayViewModel {
             let runningStart = items.first(where: \.isRunning)
                 .flatMap { $0.startedAt }
                 .flatMap { DateFormat.timestampFormatter.date(from: $0) }
+            let combinedNotes = items
+                .map(\.notes)
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }
+                .joined(separator: "\n")
             return EntryGroup(
                 client: key.client,
                 project: key.project,
                 task: key.task,
                 baseSeconds: items.reduce(0) { $0 + $1.seconds },
-                runningStartedAt: runningStart
+                runningStartedAt: runningStart,
+                notes: combinedNotes
             )
         }.sorted { lhs, rhs in
             if lhs.client != rhs.client { return lhs.client < rhs.client }

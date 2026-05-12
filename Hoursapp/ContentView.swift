@@ -409,9 +409,19 @@ private struct EntryRow: View {
                     Text(group.client)
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
-                    Text(group.project)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.primary)
+                    HStack(spacing: 5) {
+                        Text(group.project)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                        if group.hasNotes {
+                            Image(systemName: "note.text")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.secondary)
+                                .help(notesTooltip)
+                        }
+                    }
                     Text(group.task)
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
@@ -489,6 +499,16 @@ private struct EntryRow: View {
                 deleteAllInGroup()
             }
         }
+    }
+
+    /// Truncates the group's combined notes for the `.help` tooltip so a long
+    /// note doesn't paint a giant rectangle next to the cursor.
+    private var notesTooltip: String {
+        let limit = 240
+        if group.notes.count > limit {
+            return group.notes.prefix(limit) + "…"
+        }
+        return group.notes
     }
 
     /// Deletes every sibling entry sharing this group's combo on the current

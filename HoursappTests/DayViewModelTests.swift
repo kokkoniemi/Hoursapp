@@ -169,7 +169,7 @@ struct DayViewModelTests {
             stoppedAt: Date.now.addingTimeInterval(-1)))
 
         let group = EntryGroup(client: "Acme", project: "Site", task: "Design",
-                               baseSeconds: 0, runningStartedAt: nil)
+                               baseSeconds: 0, runningStartedAt: nil, notes: "")
         #expect(vm.entries(for: group).map(\.id) == ["today1"])
     }
 
