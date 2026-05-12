@@ -65,6 +65,8 @@ final class DayViewModel {
 
     var dayKey: String { DateFormat.day(from: selectedDate) }
 
+    var isToday: Bool { calendar.isDateInToday(selectedDate) }
+
     func entries(for group: EntryGroup) -> [Entry] {
         let key = dayKey
         return storage.entries.filter {

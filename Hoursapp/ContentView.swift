@@ -54,9 +54,28 @@ private struct HeaderView: View {
 
             Spacer()
 
-            Text(model.dayTitle)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.primary)
+            HStack(spacing: 6) {
+                Text(model.dayTitle)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.primary)
+
+                if !model.isToday {
+                    Button {
+                        model.goToToday()
+                    } label: {
+                        Text("Today")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(Color.accentColor)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(
+                                Capsule().fill(Color.accentColor.opacity(0.15))
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .help("Jump to today")
+                }
+            }
 
             Spacer()
 
@@ -355,10 +374,10 @@ private struct EntryRow: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            Text(TimeFormat.hoursMinutes(group.displayedSeconds(at: now)))
-                .font(.system(size: 16, weight: .light))
-                .foregroundStyle(.primary)
-                .monospacedDigit()
+            PulsingTime(
+                seconds: group.displayedSeconds(at: now),
+                running: group.hasRunningEntry
+            )
 
             Button {
                 if group.hasRunningEntry {
@@ -382,6 +401,37 @@ private struct EntryRow: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .background(group.hasRunningEntry ? Color.accentColor.opacity(0.08) : Color.clear)
+    }
+}
+
+/// Renders the entry's elapsed time. When `running`, drives a smooth opacity
+/// pulse via `TimelineView(.animation)` — a `withAnimation(.repeatForever)`
+/// inside the surrounding 1-second TimelineView gets reset on every tick and
+/// never actually oscillates, so we compute opacity from the wall clock each
+/// frame instead.
+private struct PulsingTime: View {
+    let seconds: Int
+    let running: Bool
+
+    var body: some View {
+        let text = TimeFormat.hoursMinutes(seconds)
+        if running {
+            TimelineView(.animation) { context in
+                let t = context.date.timeIntervalSinceReferenceDate
+                // 2 s period: full cycle 1.0 → 0.55 → 1.0
+                let phase = (cos(t * .pi) + 1) / 2  // 0…1
+                Text(text)
+                    .font(.system(size: 16, weight: .light))
+                    .foregroundStyle(.primary)
+                    .monospacedDigit()
+                    .opacity(0.55 + 0.45 * phase)
+            }
+        } else {
+            Text(text)
+                .font(.system(size: 16, weight: .light))
+                .foregroundStyle(.primary)
+                .monospacedDigit()
+        }
     }
 }
 

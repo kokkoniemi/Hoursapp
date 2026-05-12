@@ -153,48 +153,50 @@ struct EntrySheet: View {
 
             Divider()
 
-            VStack(alignment: .leading, spacing: 10) {
-                PickerField(
-                    title: "Client",
-                    options: clients,
-                    selection: $client,
-                    onRename: { old, new in
-                        guard storage.renameClient(from: old, to: new) else { return false }
-                        if originalClient == old { originalClient = new }
-                        return true
-                    }
-                )
-                PickerField(
-                    title: "Project",
-                    options: projects,
-                    selection: $project,
-                    onRename: { old, new in
-                        guard !trimmedClient.isEmpty else { return false }
-                        guard storage.renameProject(client: trimmedClient, from: old, to: new) else { return false }
-                        if originalProject == old { originalProject = new }
-                        return true
-                    }
-                )
-                PickerField(
-                    title: "Task",
-                    options: tasks,
-                    selection: $task,
-                    onRename: { old, new in
-                        guard !trimmedClient.isEmpty else { return false }
-                        guard storage.renameTask(client: trimmedClient, from: old, to: new) else { return false }
-                        if originalTask == old { originalTask = new }
-                        return true
-                    }
-                )
-                HoursField(seconds: $seconds, isFocused: $hoursFocused, onUserEdit: {
-                    hasManualHoursEdit = true
-                })
-                NotesField(text: $notes)
-                FavoriteRow(isOn: favoriteBinding, isEnabled: canSave)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 10) {
+                    PickerField(
+                        title: "Client",
+                        options: clients,
+                        selection: $client,
+                        onRename: { old, new in
+                            guard storage.renameClient(from: old, to: new) else { return false }
+                            if originalClient == old { originalClient = new }
+                            return true
+                        }
+                    )
+                    PickerField(
+                        title: "Project",
+                        options: projects,
+                        selection: $project,
+                        onRename: { old, new in
+                            guard !trimmedClient.isEmpty else { return false }
+                            guard storage.renameProject(client: trimmedClient, from: old, to: new) else { return false }
+                            if originalProject == old { originalProject = new }
+                            return true
+                        }
+                    )
+                    PickerField(
+                        title: "Task",
+                        options: tasks,
+                        selection: $task,
+                        onRename: { old, new in
+                            guard !trimmedClient.isEmpty else { return false }
+                            guard storage.renameTask(client: trimmedClient, from: old, to: new) else { return false }
+                            if originalTask == old { originalTask = new }
+                            return true
+                        }
+                    )
+                    HoursField(seconds: $seconds, isFocused: $hoursFocused, onUserEdit: {
+                        hasManualHoursEdit = true
+                    })
+                    NotesField(text: $notes)
+                    FavoriteRow(isOn: favoriteBinding, isEnabled: canSave)
+                }
+                .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding()
-
-            Spacer(minLength: 0)
+            .frame(maxHeight: .infinity)
 
             Divider()
 
@@ -213,7 +215,8 @@ struct EntrySheet: View {
             }
             .padding()
         }
-        .frame(width: 400, height: 380)
+        .frame(width: 400)
+        .frame(minHeight: 380, maxHeight: 600)
         .onAppear {
             if (isEditing || canSave) && !isRunning {
                 Task { @MainActor in
@@ -700,7 +703,7 @@ private struct NotesField: View {
 
             TextField("Optional", text: $text, axis: .vertical)
                 .textFieldStyle(.roundedBorder)
-                .lineLimit(2...4)
+                .lineLimit(2...12)
         }
     }
 }
