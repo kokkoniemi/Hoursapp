@@ -330,13 +330,11 @@ private struct EntriesListView: View {
             ScrollView {
                 LazyVStack(spacing: 0) {
                     ForEach(Array(model.groupedEntries.enumerated()), id: \.element.id) { index, group in
-                        EntryRow(group: group, now: now, dayKey: model.dayKey)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                if let entry = model.entries(for: group).first {
-                                    sheet = .edit(entry)
-                                }
+                        EntryRow(group: group, now: now, dayKey: model.dayKey) {
+                            if let entry = model.entries(for: group).first {
+                                sheet = .edit(entry)
                             }
+                        }
                             .transition(.asymmetric(
                                 insertion: .opacity.combined(with: .move(edge: .top)),
                                 removal: .opacity.combined(with: .move(edge: .leading))
@@ -356,27 +354,35 @@ private struct EntryRow: View {
     let group: EntryGroup
     let now: Date
     let dayKey: String
+    let onEditTap: () -> Void
 
     private let storage = Storage.shared
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 1) {
-                Text(group.client)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                Text(group.project)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.primary)
-                Text(group.task)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
+            Button(action: onEditTap) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(group.client)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                    Text(group.project)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.primary)
+                    Text(group.task)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .buttonStyle(.plain)
 
-            PulsingTime(
+            InlineEditableTime(
                 seconds: group.displayedSeconds(at: now),
-                running: group.hasRunningEntry
+                running: group.hasRunningEntry,
+                onCommit: { newSeconds in
+                    commitInlineEdit(seconds: newSeconds)
+                }
             )
 
             Button {
@@ -402,36 +408,156 @@ private struct EntryRow: View {
         .padding(.vertical, 10)
         .background(group.hasRunningEntry ? Color.accentColor.opacity(0.08) : Color.clear)
     }
+
+    /// Consolidates all sibling entries of this group on the current day into a
+    /// single entry with the given total seconds (notes preserved). Mirrors the
+    /// EntrySheet "same combo, not running" save branch.
+    private func commitInlineEdit(seconds newSeconds: Int) {
+        let siblings = storage.entries.filter {
+            $0.date == dayKey &&
+            $0.client == group.client &&
+            $0.project == group.project &&
+            $0.task == group.task
+        }
+        guard let keeper = siblings.first else { return }
+
+        let combinedNotes = siblings
+            .map(\.notes)
+            .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+            .joined(separator: "\n")
+
+        for sib in siblings where sib.id != keeper.id {
+            storage.deleteEntry(id: sib.id)
+        }
+
+        let stoppedAt = keeper.stoppedAt ?? DateFormat.timestamp(from: .now)
+        let startedAt = siblings.compactMap(\.startedAt).min() ?? keeper.startedAt
+
+        storage.upsertEntry(Entry(
+            id: keeper.id,
+            date: keeper.date,
+            client: keeper.client,
+            project: keeper.project,
+            task: keeper.task,
+            seconds: max(0, newSeconds),
+            notes: combinedNotes,
+            startedAt: startedAt,
+            stoppedAt: stoppedAt
+        ))
+    }
 }
 
-/// Renders the entry's elapsed time. When `running`, drives a smooth opacity
-/// pulse via `TimelineView(.animation)` — a `withAnimation(.repeatForever)`
-/// inside the surrounding 1-second TimelineView gets reset on every tick and
-/// never actually oscillates, so we compute opacity from the wall clock each
-/// frame instead.
-private struct PulsingTime: View {
+/// Time readout that toggles into an inline editor on click. When `running`,
+/// drives a smooth opacity pulse via `TimelineView(.animation)` instead — a
+/// `withAnimation(.repeatForever)` inside the surrounding 1-second TimelineView
+/// gets reset on every tick and never actually oscillates, so we compute
+/// opacity from the wall clock each frame instead. Inline edit is disabled
+/// while running: a live timer needs the pause/manual-edit dance from the full
+/// sheet, not a quick adjust.
+private struct InlineEditableTime: View {
     let seconds: Int
     let running: Bool
+    let onCommit: (Int) -> Void
+
+    @State private var isEditing = false
+    @State private var draft = ""
+    @State private var isHovered = false
+    @FocusState private var fieldFocused: Bool
 
     var body: some View {
-        let text = TimeFormat.hoursMinutes(seconds)
-        if running {
-            TimelineView(.animation) { context in
-                let t = context.date.timeIntervalSinceReferenceDate
-                // 2 s period: full cycle 1.0 → 0.55 → 1.0
-                let phase = (cos(t * .pi) + 1) / 2  // 0…1
-                Text(text)
-                    .font(.system(size: 16, weight: .light))
-                    .foregroundStyle(.primary)
-                    .monospacedDigit()
-                    .opacity(0.55 + 0.45 * phase)
-            }
+        if isEditing {
+            editor
+        } else if running {
+            pulsing
         } else {
-            Text(text)
+            display
+        }
+    }
+
+    private var display: some View {
+        Button {
+            beginEdit()
+        } label: {
+            Text(TimeFormat.hoursMinutes(seconds))
                 .font(.system(size: 16, weight: .light))
                 .foregroundStyle(.primary)
                 .monospacedDigit()
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.primary.opacity(isHovered ? 0.08 : 0))
+                )
+                .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+        .help("Edit time")
+    }
+
+    private var pulsing: some View {
+        TimelineView(.animation) { context in
+            let t = context.date.timeIntervalSinceReferenceDate
+            let phase = (cos(t * .pi) + 1) / 2  // 0…1, 2 s cycle
+            Text(TimeFormat.hoursMinutes(seconds))
+                .font(.system(size: 16, weight: .light))
+                .foregroundStyle(.primary)
+                .monospacedDigit()
+                .opacity(0.55 + 0.45 * phase)
+        }
+    }
+
+    private var editor: some View {
+        TextField("", text: $draft)
+            .textFieldStyle(.roundedBorder)
+            .font(.system(size: 14, weight: .light))
+            .monospacedDigit()
+            .multilineTextAlignment(.trailing)
+            .frame(width: 80)
+            .focused($fieldFocused)
+            .onSubmit { commit() }
+            .onExitCommand { cancel() }
+            .onChange(of: fieldFocused) { _, focused in
+                if !focused { commit() }
+            }
+            .onKeyPress(.upArrow) {
+                adjustDraft(by: 60)
+                return .handled
+            }
+            .onKeyPress(.downArrow) {
+                adjustDraft(by: -60)
+                return .handled
+            }
+    }
+
+    private func adjustDraft(by deltaSeconds: Int) {
+        let current = HoursInput.parse(draft) ?? seconds
+        let adjusted = max(0, current + deltaSeconds)
+        draft = TimeFormat.hoursMinutes(adjusted)
+    }
+
+    private func beginEdit() {
+        guard !running else { return }
+        draft = TimeFormat.hoursMinutes(seconds)
+        isEditing = true
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 30_000_000)
+            fieldFocused = true
+        }
+    }
+
+    private func commit() {
+        guard isEditing else { return }
+        if let parsed = HoursInput.parse(draft), parsed != seconds {
+            onCommit(parsed)
+        }
+        isEditing = false
+        draft = ""
+    }
+
+    private func cancel() {
+        isEditing = false
+        draft = ""
     }
 }
 
