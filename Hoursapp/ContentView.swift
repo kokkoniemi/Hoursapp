@@ -305,7 +305,7 @@ private struct EntriesListView: View {
 
     var body: some View {
         if model.groupedEntries.isEmpty {
-            EmptyDayView()
+            EmptyDayView(dayKey: model.dayKey)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             ScrollView {
@@ -318,11 +318,16 @@ private struct EntriesListView: View {
                                     sheet = .edit(entry)
                                 }
                             }
+                            .transition(.asymmetric(
+                                insertion: .opacity.combined(with: .move(edge: .top)),
+                                removal: .opacity.combined(with: .move(edge: .leading))
+                            ))
                         if index < model.groupedEntries.count - 1 {
                             Divider()
                         }
                     }
                 }
+                .animation(.snappy(duration: 0.22), value: model.groupedEntries.map(\.id))
             }
         }
     }
@@ -381,18 +386,83 @@ private struct EntryRow: View {
 }
 
 private struct EmptyDayView: View {
+    let dayKey: String
+
+    private let storage = Storage.shared
+
+    private var favorites: [Favorite] {
+        Array(storage.favorites.prefix(4))
+    }
+
     var body: some View {
-        VStack(spacing: 6) {
-            Image(systemName: "clock")
-                .font(.system(size: 28))
-                .foregroundStyle(.secondary)
-            Text("No time tracked")
-                .font(.system(size: 13, weight: .medium))
-            Text("Tap + to add an entry.")
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
+        VStack(spacing: 14) {
+            VStack(spacing: 6) {
+                Image(systemName: "clock")
+                    .font(.system(size: 28))
+                    .foregroundStyle(.secondary)
+                Text("No time tracked")
+                    .font(.system(size: 13, weight: .medium))
+                Text(favorites.isEmpty ? "Tap + to add an entry." : "Start a favorite, or tap + to add an entry.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+
+            if !favorites.isEmpty {
+                VStack(spacing: 6) {
+                    ForEach(favorites, id: \.self) { fav in
+                        FavoriteQuickStart(favorite: fav, dayKey: dayKey)
+                    }
+                }
+                .padding(.horizontal, 32)
+                .padding(.top, 4)
+            }
         }
         .padding()
+    }
+}
+
+private struct FavoriteQuickStart: View {
+    let favorite: Favorite
+    let dayKey: String
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button {
+            Storage.shared.startTimer(
+                client: favorite.client,
+                project: favorite.project,
+                task: favorite.task,
+                on: dayKey
+            )
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "play.circle")
+                    .font(.system(size: 16, weight: .light))
+                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(favorite.client)
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                    Text(favorite.project)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.primary)
+                    Text(favorite.task)
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.primary.opacity(isHovered ? 0.08 : 0.04))
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
     }
 }
 

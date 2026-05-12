@@ -52,12 +52,13 @@ final class IdleDetector {
         }
 
         let minutes = idleSeconds / 60
+        let minutesText = minutes == 1 ? "1 minute" : "\(minutes) minutes"
         let alert = NSAlert()
-        alert.messageText = "You've been idle for \(minutes) minutes"
-        alert.informativeText = "A timer is still running. What would you like to do with this idle time?"
+        alert.messageText = "Welcome back — were you away for \(minutesText)?"
+        alert.informativeText = "Your timer kept running. Keep that time on the entry, take it off, or stop the timer."
         alert.addButton(withTitle: "Keep")
-        alert.addButton(withTitle: "Discard idle time")
-        alert.addButton(withTitle: "Stop timer")
+        alert.addButton(withTitle: "Subtract idle time")
+        alert.addButton(withTitle: "Stop now")
 
         let promptShownAt = Date.now
         NSApp.activate(ignoringOtherApps: true)
