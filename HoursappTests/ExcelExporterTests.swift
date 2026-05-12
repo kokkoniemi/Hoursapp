@@ -124,14 +124,26 @@ struct ExcelExporterTests {
         #expect(workbookXML.contains("name=\"Entries\""))
 
         let summaryXML = try Self.read(archive, "xl/worksheets/sheet1.xml")
-        #expect(summaryXML.contains("May 2026"))
-        // 3 May entries totaling 10800s = 3.0h, grouped into 2 (client/project/task) combos.
-        #expect(summaryXML.contains("<f>SUM(D4:D5)</f>"))
+        // Hero title uppercases the month label for visual weight.
+        #expect(summaryXML.contains("MAY 2026"))
+        // The rebuilt summary includes the three breakdown sections and the
+        // calendar heatmap. We assert their section titles rather than fragile
+        // cell positions, which keeps the test stable as the layout evolves.
+        #expect(summaryXML.contains("By client"))
+        #expect(summaryXML.contains("By project"))
+        #expect(summaryXML.contains("By task"))
+        #expect(summaryXML.contains("Calendar"))
+        #expect(summaryXML.contains("Day of week"))
+        // Conditional formatting is emitted for the breakdown data bars.
+        #expect(summaryXML.contains("type=\"dataBar\""))
+        // And a 3-color scale on the calendar heatmap.
+        #expect(summaryXML.contains("type=\"colorScale\""))
 
         let entriesXML = try Self.read(archive, "xl/worksheets/sheet2.xml")
         #expect(entriesXML.contains("Acme"))
         #expect(!entriesXML.contains("Beta"))    // Beta is in April, excluded
-        #expect(entriesXML.contains("<f>SUM(E2:E4)</f>"))
+        // Hours column moved to F after the Weekday column was inserted.
+        #expect(entriesXML.contains("<f>SUM(F2:F4)</f>"))
     }
 
     @Test("monthly export with no entries only writes the title and a placeholder")
@@ -147,7 +159,7 @@ struct ExcelExporterTests {
 
         let archive = try #require(Archive(url: url, accessMode: .read))
         let summaryXML = try Self.read(archive, "xl/worksheets/sheet1.xml")
-        #expect(summaryXML.contains("May 2026"))
+        #expect(summaryXML.contains("MAY 2026"))
         #expect(summaryXML.contains("(no stopped entries in this month)"))
     }
 
@@ -175,8 +187,10 @@ struct ExcelExporterTests {
         #expect(workbookXML.contains("name=\"2026-05\""))
 
         let summaryXML = try Self.read(archive, "xl/worksheets/sheet1.xml")
-        #expect(summaryXML.contains("<f>SUM('2026-04'!E:E)</f>"))
-        #expect(summaryXML.contains("<f>SUM('2026-05'!E:E)</f>"))
+        // Per-month entries sheets now have hours in column F (Date | Weekday |
+        // Client | Project | Task | Hours | Notes).
+        #expect(summaryXML.contains("<f>SUM('2026-04'!F:F)</f>"))
+        #expect(summaryXML.contains("<f>SUM('2026-05'!F:F)</f>"))
         #expect(summaryXML.contains("<f>SUM(B2:B3)</f>"))
     }
 

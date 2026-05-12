@@ -112,6 +112,72 @@ struct XlsxWorkbookTests {
         #expect(xml.contains("a &amp; &lt;b&gt; 'c' \"d\""))
     }
 
+    @Test("date cells emit Excel serial values")
+    func dateCells() throws {
+        let workbook = XlsxWorkbook()
+        let sheet = workbook.addSheet(name: "Dates")
+        // Excel epoch is 1899-12-30; 2020-01-01 (UTC) is serial 43831.
+        var components = DateComponents()
+        components.year = 2020; components.month = 1; components.day = 1
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "UTC")!
+        let date = cal.date(from: components)!
+        sheet.setDate(row: 1, col: 1, date)
+
+        let url = Self.tempURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        try workbook.write(to: url)
+
+        let archive = try #require(Archive(url: url, accessMode: .read))
+        let xml = try Self.readEntry(in: archive, named: "xl/worksheets/sheet1.xml")
+        #expect(xml.contains("<v>43831</v>"))
+    }
+
+    @Test("frozen rows emit a frozen pane and autofilter sets a ref")
+    func freezeAndFilter() throws {
+        let workbook = XlsxWorkbook()
+        let sheet = workbook.addSheet(name: "Frozen")
+        sheet.setText(row: 1, col: 1, "Header")
+        sheet.frozenRows = 1
+        sheet.autoFilterRange = "A1:C10"
+
+        let url = Self.tempURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        try workbook.write(to: url)
+
+        let archive = try #require(Archive(url: url, accessMode: .read))
+        let xml = try Self.readEntry(in: archive, named: "xl/worksheets/sheet1.xml")
+        #expect(xml.contains("ySplit=\"1\""))
+        #expect(xml.contains("state=\"frozen\""))
+        #expect(xml.contains("<autoFilter ref=\"A1:C10\"/>"))
+    }
+
+    @Test("custom styles register fonts, fills and borders")
+    func customStyles() throws {
+        let workbook = XlsxWorkbook()
+        let sheet = workbook.addSheet(name: "Style")
+        let headerStyle = XlsxStyle(
+            bold: true,
+            fontColor: "FFFFFFFF",
+            fillColor: "FF305496",
+            hAlign: .center,
+            wrapText: true
+        )
+        sheet.setText(row: 1, col: 1, "Hi", style: headerStyle)
+
+        let url = Self.tempURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        try workbook.write(to: url)
+
+        let archive = try #require(Archive(url: url, accessMode: .read))
+        let styles = try Self.readEntry(in: archive, named: "xl/styles.xml")
+        #expect(styles.contains("<color rgb=\"FFFFFFFF\"/>"))
+        #expect(styles.contains("<fgColor rgb=\"FF305496\"/>"))
+        #expect(styles.contains("horizontal=\"center\""))
+        #expect(styles.contains("wrapText=\"1\""))
+        #expect(styles.contains("<b/>"))
+    }
+
     @Test("multiple sheets get distinct sheetN.xml entries")
     func multipleSheets() throws {
         let workbook = XlsxWorkbook()
