@@ -318,9 +318,24 @@ private struct DayPill: View {
     let day: WeekDay
     let now: Date
 
+    private var displayedSeconds: Int { day.displayedSeconds(at: now) }
+
+    /// Dim weekend pills that have no tracked time and aren't highlighted, so
+    /// the eye reads weekdays first and isn't tricked into thinking Saturday
+    /// was forgotten.
+    private var isDimmed: Bool {
+        day.isWeekend && displayedSeconds == 0 && !day.isSelected && !day.isToday
+    }
+
     private var labelColor: Color {
         if day.isSelected { return .white }
-        return day.isToday ? .accentColor : .primary
+        if day.isToday { return .accentColor }
+        return isDimmed ? .secondary : .primary
+    }
+
+    private var timeColor: Color {
+        if day.isSelected { return .primary }
+        return isDimmed ? .secondary : .secondary
     }
 
     var body: some View {
@@ -337,11 +352,12 @@ private struct DayPill: View {
             }
             .frame(height: 26)
 
-            Text(TimeFormat.hoursMinutes(day.displayedSeconds(at: now)))
+            Text(TimeFormat.hoursMinutes(displayedSeconds))
                 .font(.system(size: 11))
-                .foregroundStyle(day.isSelected ? .primary : .secondary)
+                .foregroundStyle(timeColor)
                 .monospacedDigit()
         }
+        .opacity(isDimmed ? 0.45 : 1.0)
     }
 }
 

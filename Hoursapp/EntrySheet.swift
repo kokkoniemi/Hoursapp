@@ -448,41 +448,60 @@ private struct PickerField: View {
     }
 
     private var picker: some View {
-        HStack {
-            Picker("", selection: $selection) {
-                if selection.isEmpty {
-                    Text("Choose…").tag("")
-                } else if !options.contains(selection) {
-                    Text(selection).tag(selection)
-                }
-                ForEach(options, id: \.self) { option in
-                    Text(option).tag(option)
+        Menu {
+            if !options.isEmpty {
+                Section {
+                    ForEach(options, id: \.self) { option in
+                        Button {
+                            selection = option
+                        } label: {
+                            if option == selection {
+                                Label(option, systemImage: "checkmark")
+                            } else {
+                                Text(option)
+                            }
+                        }
+                    }
                 }
             }
-            .labelsHidden()
-            .pickerStyle(.menu)
-            .frame(width: 220, alignment: .leading)
 
-            Spacer(minLength: 0)
-
-            if onRename != nil, !selection.isEmpty {
+            Section {
                 Button {
-                    enterRenamingMode()
+                    enterAddingMode()
                 } label: {
-                    Image(systemName: "pencil")
+                    Label("New \(title.lowercased())…", systemImage: "plus")
                 }
-                .buttonStyle(.borderless)
-                .help("Rename \(title.lowercased())")
+                if onRename != nil, !selection.isEmpty, options.contains(selection) {
+                    Button {
+                        enterRenamingMode()
+                    } label: {
+                        Label("Rename \"\(selection)\"…", systemImage: "pencil")
+                    }
+                }
             }
-
-            Button {
-                enterAddingMode()
-            } label: {
-                Image(systemName: "plus")
+        } label: {
+            HStack(spacing: 6) {
+                Text(selection.isEmpty ? "Choose…" : selection)
+                    .foregroundStyle(selection.isEmpty ? .secondary : .primary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Spacer(minLength: 4)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(.secondary)
             }
-            .buttonStyle(.borderless)
-            .help("Add new \(title.lowercased())")
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .strokeBorder(Color.primary.opacity(0.15), lineWidth: 0.5)
+            )
+            .contentShape(Rectangle())
         }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func enterAddingMode() {

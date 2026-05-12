@@ -9,6 +9,7 @@ struct WeekDay: Identifiable, Hashable {
     let runningStartedAt: Date?
     let isSelected: Bool
     let isToday: Bool
+    let isWeekend: Bool
 
     var id: String { dayKey }
     var hasRunningEntry: Bool { runningStartedAt != nil }
@@ -94,7 +95,8 @@ final class DayViewModel {
                 baseSeconds: base,
                 runningStartedAt: runningStart,
                 isSelected: calendar.isDate(date, inSameDayAs: selectedDate),
-                isToday: calendar.isDateInToday(date)
+                isToday: calendar.isDateInToday(date),
+                isWeekend: calendar.isDateInWeekend(date)
             )
         }
     }
