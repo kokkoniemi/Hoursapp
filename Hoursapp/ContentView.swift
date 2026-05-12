@@ -3,6 +3,8 @@ import SwiftUI
 struct ContentView: View {
     @State private var model = DayViewModel(storage: .shared)
     @State private var sheet: EditSheet?
+    @State private var visibleToastAction: Storage.UndoableAction?
+    @State private var toastDismissTask: Task<Void, Never>?
     private let storage = Storage.shared
 
     var body: some View {
@@ -18,9 +20,35 @@ struct ContentView: View {
             }
             .frame(width: 480, height: 640)
             .background(undoShortcut)
+            .overlay(alignment: .bottom) {
+                if let action = visibleToastAction {
+                    UndoToast(action: action) {
+                        storage.undoLastAction()
+                    }
+                    .padding(.bottom, 50)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
         }
         .sheet(item: $sheet) { item in
             EntrySheet(sheet: item) { sheet = nil }
+        }
+        .onChange(of: storage.lastUndoableAction) { _, newAction in
+            handleUndoableChange(newAction)
+        }
+    }
+
+    private func handleUndoableChange(_ action: Storage.UndoableAction?) {
+        toastDismissTask?.cancel()
+        guard let action else {
+            withAnimation(.snappy(duration: 0.2)) { visibleToastAction = nil }
+            return
+        }
+        withAnimation(.snappy(duration: 0.2)) { visibleToastAction = action }
+        toastDismissTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 4_000_000_000)
+            guard !Task.isCancelled else { return }
+            withAnimation(.snappy(duration: 0.25)) { visibleToastAction = nil }
         }
     }
 
@@ -407,6 +435,59 @@ private struct EntryRow: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .background(group.hasRunningEntry ? Color.accentColor.opacity(0.08) : Color.clear)
+        .contextMenu {
+            if group.hasRunningEntry {
+                Button("Stop timer", systemImage: "pause.fill") {
+                    storage.stopTimer()
+                }
+            } else {
+                Button("Start timer", systemImage: "play.fill") {
+                    storage.startTimer(
+                        client: group.client,
+                        project: group.project,
+                        task: group.task,
+                        on: dayKey
+                    )
+                }
+            }
+
+            let todayKey = DateFormat.day(from: .now)
+            if dayKey != todayKey {
+                Button("Start on today", systemImage: "arrow.uturn.forward") {
+                    storage.startTimer(
+                        client: group.client,
+                        project: group.project,
+                        task: group.task,
+                        on: todayKey
+                    )
+                }
+            }
+
+            Button("Edit…", systemImage: "pencil") {
+                onEditTap()
+            }
+
+            Divider()
+
+            Button("Delete entry", systemImage: "trash", role: .destructive) {
+                deleteAllInGroup()
+            }
+        }
+    }
+
+    /// Deletes every sibling entry sharing this group's combo on the current
+    /// day. The row visually represents the whole group, so a single "Delete"
+    /// should clear it rather than leaving stray siblings behind.
+    private func deleteAllInGroup() {
+        let siblings = storage.entries.filter {
+            $0.date == dayKey &&
+            $0.client == group.client &&
+            $0.project == group.project &&
+            $0.task == group.task
+        }
+        for sib in siblings {
+            storage.deleteEntry(id: sib.id)
+        }
     }
 
     /// Consolidates all sibling entries of this group on the current day into a
@@ -558,6 +639,44 @@ private struct InlineEditableTime: View {
     private func cancel() {
         isEditing = false
         draft = ""
+    }
+}
+
+private struct UndoToast: View {
+    let action: Storage.UndoableAction
+    let onUndo: () -> Void
+
+    private var message: String {
+        switch action {
+        case .deletedEntry:   return "Entry deleted"
+        case .discardedIdle:  return "Idle time subtracted"
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(message)
+                .font(.system(size: 12))
+                .foregroundStyle(.primary)
+            Button(action: onUndo) {
+                HStack(spacing: 4) {
+                    Text("Undo")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text("⌘Z")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                }
+                .foregroundStyle(Color.accentColor)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(.regularMaterial, in: Capsule())
+        .overlay(
+            Capsule().stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
+        )
+        .shadow(color: Color.black.opacity(0.25), radius: 8, y: 2)
     }
 }
 
