@@ -16,7 +16,7 @@ A minimal macOS menu-bar time tracker. Lives entirely in your menu bar, stores e
 - Long-run warning: nudges you if a timer has been on for unusually long
 - Right-click the menu-bar icon for a quick-add menu (today's entries, favorites, stop, quit)
 - Launch at login (toggle in Settings)
-- Export to Excel (`.xlsx`) — pick a month or "All months", get a workbook with a Summary sheet (totals by client/project/task) plus an Entries sheet. The all-months variant gives one sheet per month + a cross-sheet summary. Available from the right-click menu (`⌘E`).
+- Export to Excel (`.xlsx`) — pick a month or "All months", get a workbook with a Summary sheet (totals by client/project/task) plus an Entries sheet. The all-months variant gives one sheet per month + a cross-sheet summary. Available from the right-click menu (`⌘E`). See [docs/sample-export.xlsx](docs/sample-export.xlsx) for an example.
 - SQLite storage at `~/.hoursapp/hoursapp.sqlite` with foreign keys, audit timestamps, and per-client task scoping.
 
 ## Requirements
@@ -56,6 +56,7 @@ Covers the GRDB-backed `Storage` (entries, favorites, timer flow, idle/long-run 
 
 - [tools/seed.sh](tools/seed.sh) — wipes `~/.hoursapp/hoursapp.sqlite` and writes sample data straight into the database. Quit Hoursapp before running.
 - [tools/screenshot.sh](tools/screenshot.sh) — regenerates [docs/screenshot.png](docs/screenshot.png). Builds a Release `.app`, points it at a throwaway `HOURSAPP_DATA_DIR` (your real `~/.hoursapp/` is left alone), seeds the current week with sample entries, auto-opens the popover, and grabs the window via `screencapture`. Quit Hoursapp before running.
+- [tools/generate_sample_export.sh](tools/generate_sample_export.sh) — regenerates [docs/sample-export.xlsx](docs/sample-export.xlsx) by running a gated test in the HoursappTests target that builds a deterministic April 2026 dataset and writes it via the real `ExcelExporter`. Run from the repo root.
 - [tools/generate_icon.swift](tools/generate_icon.swift) — regenerates the app icon PNGs into the asset catalog. Run from the repo root:
 
   ```sh

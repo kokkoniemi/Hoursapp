@@ -16,3 +16,7 @@ Packages/
 .DS_Store
 
 PLAN.md
+
+# Trigger file for tools/generate_sample_export.sh — created transiently
+# while the gated test runs, removed by the script's EXIT trap.
+.sample-export-trigger

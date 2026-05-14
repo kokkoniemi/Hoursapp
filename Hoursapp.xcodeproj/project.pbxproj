@@ -44,6 +44,7 @@
 		D9D092F811CAE2F31A466264 /* Records.swift in Sources */ = {isa = PBXBuildFile; fileRef = 139952800A10A624ED10D3A6 /* Records.swift */; };
 		DA9DD3D0F4AF4178696585A1 /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A780A2E2AEFAB77F4703040 /* AppPreferences.swift */; };
 		DB6C573B6D8F94A54B7AA6DA /* UndoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C0A03FF2F983D6D1FA2B7B8 /* UndoTests.swift */; };
+		ED9F710A28C2E4831D9163B7 /* SampleExportGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBC8AD555D62B6B6C308659E /* SampleExportGenerator.swift */; };
 		EF2D417239FC1EF9BE6C021F /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 93E100FF53184C615DEA7073 /* ZIPFoundation */; };
 		EFACFD51D6E22BAFAB7C4EBD /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D663E54A0487AAF52CAA4798 /* SettingsView.swift */; };
 		FDA05055CD42168B218C9266 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 9013E1F1EA3B6E5B072593FB /* GRDB */; };
@@ -95,6 +96,7 @@
 		C5BABBF77FDF071835F34476 /* SleepWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepWatcher.swift; sourceTree = "<group>"; };
 		C6ACFDE7BF38A98B3EA8F815 /* RenameTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenameTests.swift; sourceTree = "<group>"; };
 		CAADBEF349FF8C47940238E2 /* ExcelExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExcelExporter.swift; sourceTree = "<group>"; };
+		CBC8AD555D62B6B6C308659E /* SampleExportGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SampleExportGenerator.swift; sourceTree = "<group>"; };
 		D663E54A0487AAF52CAA4798 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		D8CFE355A4CD538A7A547BFC /* HoursappTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HoursappTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		DA61E67A38EA599B05924639 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -203,6 +205,7 @@
 				67193C32403CE0B586366A05 /* HoursDatabaseTests.swift */,
 				E54DAB4982A8053AC9857F5B /* HoursInputTests.swift */,
 				C6ACFDE7BF38A98B3EA8F815 /* RenameTests.swift */,
+				CBC8AD555D62B6B6C308659E /* SampleExportGenerator.swift */,
 				A93F34B4395079B130275A46 /* StorageTests.swift */,
 				A57C68494BF91EF495295754 /* StorageTimerTests.swift */,
 				9237BB14AA22FFB618311C0C /* TestSupport.swift */,
@@ -354,6 +357,7 @@
 				61C5D6552A77851B0839573B /* HoursDatabaseTests.swift in Sources */,
 				C7CC5FC96148C585F7004487 /* HoursInputTests.swift in Sources */,
 				1197244DC5FAAA8CAFCC5455 /* RenameTests.swift in Sources */,
+				ED9F710A28C2E4831D9163B7 /* SampleExportGenerator.swift in Sources */,
 				C9593BABA387A1A30399F5EA /* StorageTests.swift in Sources */,
 				38025F5FC36DE36AEDC4AF5A /* StorageTimerTests.swift in Sources */,
 				93B601D9AF9910794970A252 /* TestSupport.swift in Sources */,
