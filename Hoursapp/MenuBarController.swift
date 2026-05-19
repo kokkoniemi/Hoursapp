@@ -7,6 +7,7 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
     private let statusItem: NSStatusItem
     private let popover: NSPopover
     private var ticker: Timer?
+    private var controlClickMonitor: Any?
 
     override init() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -33,6 +34,9 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
 
     deinit {
         ticker?.invalidate()
+        if let controlClickMonitor {
+            NSEvent.removeMonitor(controlClickMonitor)
+        }
     }
 
     private func configureStatusItem() {
@@ -41,6 +45,30 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
         button.target = self
         button.action = #selector(handleClick(_:))
         button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+        installControlClickMonitor()
+    }
+
+    /// Intercepts Ctrl+left-click on the status-bar button before AppKit
+    /// dispatches it. We can't detect this from the button's regular action
+    /// — `NSStatusBarButton` doesn't fire the action when Control is held —
+    /// so we look at the event itself and route it to the context menu.
+    ///
+    /// The menu is shown synchronously from the monitor closure (which AppKit
+    /// already delivers on the main thread). Hopping through a Task here
+    /// introduced a deferred continuation that prevented `NSApp.terminate`
+    /// from completing when the user picked "Quit" — staying synchronous
+    /// matches the right-click path exactly.
+    private func installControlClickMonitor() {
+        controlClickMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown]) { [weak self] event in
+            guard let self else { return event }
+            guard event.window === self.statusItem.button?.window else { return event }
+            // Match only plain Ctrl (no Cmd/Opt/Shift) so we don't interfere
+            // with Cmd-drag rearrangement of menu-bar items.
+            let mods = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            guard mods == .control else { return event }
+            MainActor.assumeIsolated { self.showQuickAddMenu() }
+            return nil
+        }
     }
 
     private func startTicker() {
@@ -190,6 +218,8 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
     }
 
     @objc private func handleClick(_ sender: Any?) {
+        // Ctrl+click is handled earlier by the local event monitor and never
+        // reaches the button's action — see installControlClickMonitor().
         let event = NSApp.currentEvent
         if event?.type == .rightMouseUp {
             showQuickAddMenu()
