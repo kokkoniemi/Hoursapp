@@ -100,6 +100,109 @@ struct IdleEngineTests {
     }
 }
 
+@Suite("SleepEngine")
+struct SleepEngineTests {
+    @Test("disabled feature always skips")
+    func disabled() {
+        let d = SleepEngine.decide(
+            enabled: false,
+            sleptSeconds: 9999, runningElapsedAtWake: 99_999,
+            thresholdMinutes: 1
+        )
+        #expect(d == .skip)
+    }
+
+    @Test("no running timer skips")
+    func noRunning() {
+        let d = SleepEngine.decide(
+            enabled: true,
+            sleptSeconds: 9999, runningElapsedAtWake: nil,
+            thresholdMinutes: 1
+        )
+        #expect(d == .skip)
+    }
+
+    @Test("below threshold skips")
+    func belowThreshold() {
+        let d = SleepEngine.decide(
+            enabled: true,
+            sleptSeconds: 10 * 60 - 1, runningElapsedAtWake: 99_999,
+            thresholdMinutes: 10
+        )
+        #expect(d == .skip)
+    }
+
+    @Test("at threshold prompts with slept seconds")
+    func atThreshold() {
+        let d = SleepEngine.decide(
+            enabled: true,
+            sleptSeconds: 10 * 60, runningElapsedAtWake: 99_999,
+            thresholdMinutes: 10
+        )
+        #expect(d == .prompt(sleptSeconds: 600))
+    }
+
+    @Test("slept clamped to running elapsed")
+    func clampToElapsed() {
+        // Mac slept 2h but the timer was only started 8m ago — we can't
+        // subtract more than the entry has on it.
+        let d = SleepEngine.decide(
+            enabled: true,
+            sleptSeconds: 7200, runningElapsedAtWake: 480,
+            thresholdMinutes: 5
+        )
+        #expect(d == .prompt(sleptSeconds: 480))
+    }
+
+    @Test("clamping below threshold cancels the prompt")
+    func clampBelowThreshold() {
+        let d = SleepEngine.decide(
+            enabled: true,
+            sleptSeconds: 7200, runningElapsedAtWake: 60,
+            thresholdMinutes: 10
+        )
+        #expect(d == .skip)
+    }
+
+    @Test("non-positive thresholdMinutes clamps to 1 minute")
+    func thresholdMinAtLeastOne() {
+        let d = SleepEngine.decide(
+            enabled: true,
+            sleptSeconds: 60, runningElapsedAtWake: 9999,
+            thresholdMinutes: 0
+        )
+        #expect(d == .prompt(sleptSeconds: 60))
+    }
+}
+
+@Suite("SleepWatcher.durationText")
+struct SleepWatcherDurationTests {
+    @Test("under a minute rounds up to 1 minute")
+    func subMinute() {
+        #expect(SleepWatcher.durationText(30) == "1 minute")
+    }
+
+    @Test("pluralizes minutes")
+    func minutes() {
+        #expect(SleepWatcher.durationText(120) == "2 minutes")
+    }
+
+    @Test("singular hour, no minute remainder")
+    func singularHour() {
+        #expect(SleepWatcher.durationText(3600) == "1 hour")
+    }
+
+    @Test("hours and minutes")
+    func hoursAndMinutes() {
+        #expect(SleepWatcher.durationText(8 * 3600 + 5 * 60) == "8 hours 5 minutes")
+    }
+
+    @Test("plural hours, singular minute")
+    func mixedPluralization() {
+        #expect(SleepWatcher.durationText(2 * 3600 + 60) == "2 hours 1 minute")
+    }
+}
+
 @Suite("LongRunEngine")
 struct LongRunEngineTests {
     @Test("disabled feature always skips")

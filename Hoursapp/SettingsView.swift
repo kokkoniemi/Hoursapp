@@ -33,7 +33,10 @@ struct SettingsView: View {
             }
 
             Section("Sleep / wake") {
-                Toggle("Pause timer when Mac sleeps and resume on wake", isOn: $pauseOnSleep)
+                Toggle("Prompt on wake to subtract sleep time from a running timer", isOn: $pauseOnSleep)
+                Text("Uses the idle threshold above. Below it, the sleep is ignored.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Long-running timer") {
